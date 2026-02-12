@@ -40,12 +40,12 @@ async function seed() {
     const avatarFolders = ['3d', 'bluey', 'memo', 'notion', 'teams', 'toons', 'upstream', 'vibrant'];
     const avatarCounts: { [key: string]: number } = {
       '3d': 5,
-      'bluey': 20,
+      'bluey': 10,
       'memo': 20,
-      'notion': 20,
-      'teams': 20,
-      'toons': 20,
-      'upstream': 20,
+      'notion': 10,
+      'teams': 5,
+      'toons': 7,
+      'upstream': 5,
       'vibrant': 20
     };
     

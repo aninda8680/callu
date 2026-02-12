@@ -35,14 +35,19 @@ app.prepare().then(() => {
     // User authenticates/identifies
     socket.on("identify", async (userId: string) => {
       console.log(`User ${userId} identified with socket ${socket.id}`);
+      
+      // Store userId in socket.data for easy access on disconnect
+      socket.data.userId = userId;
       onlineUsers.set(userId, socket.id);
       
-      // Update user status in DB to online (optional, but good for persistence)
       // Broadcast to others that this user came online
-      socket.broadcast.emit("user-online", { userId });
+      socket.broadcast.emit("user-online", userId);
       
       // Send current online user list to the new user
       socket.emit("online-users-list", Array.from(onlineUsers.keys()));
+      
+      // Emit consolidated list to all clients
+      io.emit("online-users-list", Array.from(onlineUsers.keys()));
     });
 
     // Generic Signaling for WebRTC (SimplePeer or Raw)
@@ -72,20 +77,16 @@ app.prepare().then(() => {
     });
     
     // Status updates
-    socket.on("disconnect", () => {
-      console.log("Client disconnected:", socket.id);
-      // Find userId for this socket
-      let disconnectedUserId: string | undefined;
-      for (const [userId, socketId] of onlineUsers.entries()) {
-        if (socketId === socket.id) {
-          disconnectedUserId = userId;
-          onlineUsers.delete(userId);
-          break;
-        }
-      }
+    socket.on("disconnect", (reason) => {
+      const userId = socket.data.userId;
+      console.log(`Client disconnected: ${socket.id}, userId: ${userId}, reason: ${reason}`);
       
-      if (disconnectedUserId) {
-        socket.broadcast.emit("user-offline", { userId: disconnectedUserId });
+      if (userId && onlineUsers.has(userId)) {
+        onlineUsers.delete(userId);
+        // Broadcast to all clients that user went offline
+        io.emit("user-offline", userId);
+        // Emit updated online users list
+        io.emit("online-users-list", Array.from(onlineUsers.keys()));
       }
     });
   });

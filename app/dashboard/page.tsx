@@ -3,13 +3,16 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import { useCall } from "@/context/CallContext";
-import { Video, Mic, Search } from "lucide-react";
+import { Video, Mic, Users } from "lucide-react";
 
 interface User {
   _id: string;
   name: string;
-  avatarConfig: any;
-  email: string; // for key
+  avatarConfig: {
+    image: string;
+    color: string;
+  };
+  email: string;
 }
 
 export default function DashboardPage() {
@@ -37,19 +40,39 @@ export default function DashboardPage() {
   }, [user]);
 
   const isOnline = (id: string) => onlineUsers.includes(id);
+  
+  // Filter to only show online users
+  const onlineMembers = users.filter((u) => isOnline(u._id));
 
   return (
     <div className="space-y-8">
-      <header className="flex justify-between items-end">
-         <div>
-            <h2 className="text-3xl font-light tracking-tight text-white">Community</h2>
-            <p className="text-zinc-500 mt-2">Discover and connect with members.</p>
-         </div>
+      <header>
+         <h2 className="text-3xl font-light tracking-tight text-white">Community</h2>
+         <p className="text-zinc-500 mt-2">
+           {onlineMembers.length > 0 
+             ? `${onlineMembers.length} member${onlineMembers.length !== 1 ? 's' : ''} online` 
+             : 'No members online'}
+         </p>
       </header>
 
-      {/* Bento Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {users.map((member) => (
+      {/* Bento Grid or Empty State */}
+      {!loading && onlineMembers.length === 0 ? (
+        // Empty state - no one online
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6">
+          <div className="relative">
+            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center border border-zinc-700">
+              <Users className="w-16 h-16 text-zinc-600" />
+            </div>
+            <div className="absolute inset-0 rounded-full bg-zinc-700/20 animate-ping" />
+          </div>
+          <div className="text-center space-y-2">
+            <h3 className="text-2xl font-light text-white">No one is online right now</h3>
+            <p className="text-zinc-500">Check back later to connect with community members</p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {onlineMembers.map((member) => (
              <div key={member._id} className="group relative bg-zinc-900 border border-zinc-800 rounded-3xl p-6 hover:border-zinc-700 transition-colors">
                 <div className="flex justify-between items-start mb-6">
                    <div className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center bg-zinc-800">
@@ -90,7 +113,8 @@ export default function DashboardPage() {
           {loading && [1,2,3,4].map(i => (
              <div key={i} className="animate-pulse bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 h-[200px]" />
           ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

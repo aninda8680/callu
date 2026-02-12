@@ -1,48 +1,31 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-// import SimplePeer from "simple-peer"; // We will lazy load or use raw WebRTC
 import { useSocket } from "@/context/SocketContext";
 import { useAuth } from "@/context/AuthContext";
 import { useCall } from "@/context/CallContext";
-import { Phone, PhoneOff, Video, Mic, MicOff, VideoOff } from "lucide-react";
-
-// Helper to get SimplePeer safely in Next.js
-// We use raw WebRTC for maximum control and zero-delay tuning if SimplePeer fails, 
-// but SimplePeer is easier. Let's try raw RTCPeerConnection for better "zero delay" control directly?
-// No, SimplePeer is standard. I'll stick to it but import differently.
+import { Phone, PhoneOff, Video, Mic, MicOff, VideoOff, PhoneIncoming } from "lucide-react";
 
 export default function CallManager() {
   const { user } = useAuth();
   const { socket } = useSocket();
   const { outgoingCallData, setOutgoingCallData } = useCall();
   
-  const [incomingCall, setIncomingCall] = useState<{ from: string; name: string; signal: any } | null>(null);
+  const [incomingCall, setIncomingCall] = useState<{ from: string; name: string; signal: RTCSessionDescriptionInit } | null>(null);
   const [callAccepted, setCallAccepted] = useState(false);
-  const [callEnded, setCallEnded] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
-
+  
   const myVideo = useRef<HTMLVideoElement>(null);
   const userVideo = useRef<HTMLVideoElement>(null);
   const connectionRef = useRef<RTCPeerConnection | null>(null);
-
-  // Sound effects
-  const ringSound = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    ringSound.current = new Audio("https://pixabay.com/sound-effects/download/phone-calling-1-16327.mp3??"); 
-    // Just a placeholder URL, handled simpler in UI
-  }, []);
 
   // Handle Socket Events for Incoming Calls
   useEffect(() => {
     if (!socket) return;
 
     socket.on("call-made", (data) => {
-      console.log("Incoming call from", data.name);
       setIncomingCall({ from: data.from, name: data.name, signal: data.signal });
-      // Play ringtone?
     });
 
     return () => {
@@ -50,14 +33,7 @@ export default function CallManager() {
     };
   }, [socket]);
 
-  // Handle Outgoing Call Trigger
-  useEffect(() => {
-    if (outgoingCallData && !callAccepted) {
-      startCall(outgoingCallData.userId, outgoingCallData.userName);
-    }
-  }, [outgoingCallData]);
-
-  const startCall = async (idToCall: string, nameToCall: string) => {
+  const startCall = async (idToCall: string) => {
     // 1. Get Media
     try {
       const currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -177,8 +153,14 @@ export default function CallManager() {
     }
   };
 
+  // Handle Outgoing Call Trigger
+  useEffect(() => {
+    if (outgoingCallData && !callAccepted) {
+      startCall(outgoingCallData.userId);
+    }
+  }, [outgoingCallData, callAccepted]);
+
   const endCall = () => {
-    setCallEnded(true);
     connectionRef.current?.close();
     setIncomingCall(null);
     setOutgoingCallData(null);
@@ -197,9 +179,27 @@ export default function CallManager() {
         {/* Connection Status */}
         {!callAccepted && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-10">
-             <div className="w-24 h-24 bg-zinc-800 rounded-full animate-pulse mb-6 flex items-center justify-center">
-                <Phone size={40} className="text-zinc-400" />
-             </div>
+             {/* Show ringing animation for incoming call */}
+             {incomingCall && (
+               <div className="relative mb-8">
+                 <div className="w-32 h-32 bg-green-500/20 rounded-full flex items-center justify-center">
+                   <div className="w-24 h-24 bg-green-500/30 rounded-full flex items-center justify-center animate-pulse">
+                     <PhoneIncoming className="w-12 h-12 text-green-500 animate-bounce" />
+                   </div>
+                 </div>
+                 <div className="absolute inset-0 rounded-full bg-green-500/10 animate-ping" />
+               </div>
+             )}
+             {!incomingCall && outgoingCallData && (
+               <div className="relative mb-8">
+                 <div className="w-32 h-32 bg-blue-500/20 rounded-full flex items-center justify-center">
+                   <div className="w-24 h-24 bg-blue-500/30 rounded-full flex items-center justify-center animate-pulse">
+                     <Phone className="w-12 h-12 text-blue-500" />
+                   </div>
+                 </div>
+                 <div className="absolute inset-0 rounded-full bg-blue-500/10 animate-ping" />
+               </div>
+             )}
              {incomingCall ? (
                 <>
                   <h3 className="text-2xl text-white mb-2">{incomingCall.name} is calling...</h3>
@@ -224,7 +224,17 @@ export default function CallManager() {
         )}
 
         {/* Video Grid */}
-        <div className={`grid ${callAccepted ? 'grid-cols-2' : 'hidden'} gap-4 w-full h-[500px]`}>
+        <div className={`grid ${callAccepted ? 'grid-cols-2' : 'hidden'} gap-4 w-full h-[500px] relative`}>
+            {/* Connected status indicator */}
+            {callAccepted && (
+              <div className="absolute top-4 right-4 z-10 bg-emerald-500/20 backdrop-blur-sm rounded-full px-4 py-2 border border-emerald-500/30">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <span className="text-xs text-emerald-400 font-medium">Connected</span>
+                </div>
+              </div>
+            )}
+            
             {/* My Video */}
             <div className="relative bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800">
                 <video playsInline muted ref={myVideo} autoPlay className="w-full h-full object-cover" />

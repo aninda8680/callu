@@ -6,13 +6,15 @@
     "dev": "nodemon --watch server.ts --watch lib --ext ts,json --exec ts-node --project tsconfig.server.json server.ts",
     "build": "next build",
     "start": "node server.js",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "ts-node --project tsconfig.server.json seed.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
     "cross-env": "^10.1.0",
     "dotenv": "^17.2.4",
     "framer-motion": "^12.34.0",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.563.0",
     "mongoose": "^9.2.1",
     "next": "16.1.6",

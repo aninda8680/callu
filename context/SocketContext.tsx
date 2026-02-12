@@ -28,9 +28,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       newSocket.on("connect", () => {
-        console.log("Socket connected:", newSocket.id);
         setIsSocketConnected(true);
-        // Identify self
         newSocket.emit("identify", user._id);
       });
 
@@ -38,12 +36,17 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         setOnlineUsers(users);
       });
 
-      newSocket.on("user-online", (data: { userId: string }) => {
-        setOnlineUsers((prev) => Array.from(new Set([...prev, data.userId])));
+      newSocket.on("user-online", (userId: string) => {
+        setOnlineUsers((prev) => Array.from(new Set([...prev, userId])));
       });
 
-      newSocket.on("user-offline", (data: { userId: string }) => {
-        setOnlineUsers((prev) => prev.filter((id) => id !== data.userId));
+      newSocket.on("user-offline", (userId: string) => {
+        setOnlineUsers((prev) => prev.filter((id) => id !== userId));
+      });
+
+      newSocket.on("disconnect", (reason) => {
+        setIsSocketConnected(false);
+        // Auto-reconnect is handled by Socket.IO, no action needed
       });
 
       socketRef.current = newSocket;
