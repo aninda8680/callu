@@ -26,15 +26,7 @@ export default function Home() {
         <MemberButton onClick={() => setShowLogin(true)} />
       </nav>
 
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-[70vh] px-4 text-center w-full max-w-5xl pt-10">
-        
-        <div className="mb-10 inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-zinc-900/80 border border-zinc-700/50 text-sm font-medium text-zinc-300 backdrop-blur-xl shadow-xl shadow-emerald-500/5 hover:border-zinc-600 transition-colors cursor-default">
-           <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-           </span>
-           <span className="tracking-wide uppercase text-xs font-semibold">Accepting Applications</span>
-        </div>
+      <div className="relative z-10 flex flex-col items-center justify-start min-h-[70vh] px-4 text-center w-full max-w-5xl pt-5">
 
         <h2 className="text-6xl md:text-8xl font-medium tracking-tighter mb-10 max-w-5xl text-pretty leading-[0.95] select-none">
           The curated community <br className="hidden md:block" /> for <span className="font-playfair bg-gradient-to-b from-white via-zinc-200 to-zinc-600 bg-clip-text text-transparent italic px-2 py-1 box-decoration-clone">meaningful connections.</span>
