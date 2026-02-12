@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "nodemon --watch server.ts --watch lib --ext ts,json --exec ts-node --project tsconfig.server.json server.ts",
-    "build": "next build",
+    "build": "next build && tsc server.ts --outDir . --module commonjs --esModuleInterop --skipLibCheck --resolveJsonModule",
     "start": "node server.js",
     "lint": "eslint",
     "seed": "ts-node --project tsconfig.server.json seed.ts"
