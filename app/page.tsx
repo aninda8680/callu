@@ -3,7 +3,8 @@ import React, { useState } from "react";
 import ApplyModal, { LoginModal } from "@/components/ApplyModal";
 import StyledButton from "@/components/StyledButton";
 import MemberButton from "@/components/MemberButton";
-import { Mic, Shield, Lock, Zap } from "lucide-react";
+import { Mic, Shield, Lock, Zap, Twitter, Linkedin, Github, Mail, Activity } from "lucide-react";
+import { Footer } from "@/components/ui/modem-animated-footer";
 
 export default function Home() {
   const [showApply, setShowApply] = useState(false);
@@ -50,7 +51,7 @@ export default function Home() {
         <div className="mt-24 grid grid-cols-1 md:grid-cols-6 gap-6 w-full max-w-6xl px-4 pb-24">
              
              {/* Card 1: Exclusive Access (Large) */}
-             <div className="group col-span-1 md:col-span-4 bg-zinc-900/40 backdrop-blur-md border border-zinc-800/50 rounded-4xl p-8 hover:bg-zinc-800/60 hover:border-zinc-700 transition-all duration-500 hover:-translate-y-1 cursor-default relative overflow-hidden min-h-[320px] flex flex-col justify-between">
+             <div className="group col-span-1 md:col-span-4 bg-zinc-900/40 backdrop-blur-md border border-zinc-800/50 rounded-4xl py-8 pr-8 pl-6 hover:bg-zinc-800/60 hover:border-zinc-700 transition-all duration-500 hover:-translate-y-1 cursor-default relative overflow-hidden min-h-[320px] flex flex-col justify-between text-left">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] -mr-16 -mt-16 transition-opacity opacity-50 group-hover:opacity-100" />
                 <div className="z-10">
                    <div className="w-14 h-14 bg-zinc-800/80 rounded-2xl flex items-center justify-center mb-6 border border-zinc-700/50 group-hover:border-zinc-600 transition-colors">
@@ -130,6 +131,24 @@ export default function Home() {
         </div>
 
       </div>
+
+      <Footer
+        brandName="CALLU"
+        brandDescription="The curated community for meaningful connections."
+        socialLinks={[
+          { icon: <Twitter className="w-5 h-5" />, href: "#", label: "Twitter" },
+          { icon: <Linkedin className="w-5 h-5" />, href: "#", label: "LinkedIn" },
+          { icon: <Github className="w-5 h-5" />, href: "#", label: "GitHub" },
+          { icon: <Mail className="w-5 h-5" />, href: "#", label: "Email" },
+        ]}
+        navLinks={[
+          { label: "Manifesto", href: "#" },
+          { label: "Community", href: "#" },
+          { label: "Privacy", href: "#" },
+          { label: "Terms", href: "#" },
+        ]}
+        brandIcon={<Activity className="w-8 h-8 text-emerald-500" />}
+      />
 
       {showApply && <ApplyModal onClose={() => setShowApply(false)} />}
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
