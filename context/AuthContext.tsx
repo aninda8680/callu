@@ -10,7 +10,10 @@ interface User {
   mobile: string;
   status: 'pending' | 'approved' | 'rejected';
   role: 'user' | 'admin';
-  avatarConfig: any;
+  avatarConfig: {
+    image?: string;
+    color: string;
+  };
 }
 
 interface AuthContextType {

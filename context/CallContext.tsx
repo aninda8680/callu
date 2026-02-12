@@ -2,10 +2,10 @@
 import React, { createContext, useContext, useState } from "react";
 
 interface CallContextType {
-  callUser: (userId: string, userName: string) => void;
+  callUser: (userId: string, userName: string, userAvatar?: string) => void;
   // State meant to be consumed by CallManager
-  outgoingCallData: { userId: string; userName: string } | null;
-  setOutgoingCallData: (data: { userId: string; userName: string } | null) => void;
+  outgoingCallData: { userId: string; userName: string; userAvatar?: string } | null;
+  setOutgoingCallData: (data: { userId: string; userName: string; userAvatar?: string } | null) => void;
 }
 
 const CallContext = createContext<CallContextType>({
@@ -15,10 +15,10 @@ const CallContext = createContext<CallContextType>({
 });
 
 export const CallProvider = ({ children }: { children: React.ReactNode }) => {
-  const [outgoingCallData, setOutgoingCallData] = useState<{ userId: string; userName: string } | null>(null);
+  const [outgoingCallData, setOutgoingCallData] = useState<{ userId: string; userName: string; userAvatar?: string } | null>(null);
 
-  const callUser = (userId: string, userName: string) => {
-    setOutgoingCallData({ userId, userName });
+  const callUser = (userId: string, userName: string, userAvatar?: string) => {
+    setOutgoingCallData({ userId, userName, userAvatar });
   };
 
   return (

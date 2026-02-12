@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import { useCall } from "@/context/CallContext";
-import { Video, Mic, Users } from "lucide-react";
+import { Video, Mic } from "lucide-react";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 interface User {
   _id: string;
@@ -59,11 +60,12 @@ export default function DashboardPage() {
       {!loading && onlineMembers.length === 0 ? (
         // Empty state - no one online
         <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6">
-          <div className="relative">
-            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center border border-zinc-700">
-              <Users className="w-16 h-16 text-zinc-600" />
-            </div>
-            <div className="absolute inset-0 rounded-full bg-zinc-700/20 animate-ping" />
+          <div className="w-80 h-80">
+            <DotLottieReact
+              src="/Lotties/nobody.lottie"
+              loop
+              autoplay
+            />
           </div>
           <div className="text-center space-y-2">
             <h3 className="text-2xl font-light text-white">No one is online right now</h3>
@@ -96,7 +98,7 @@ export default function DashboardPage() {
 
                 <div className="mt-8 flex gap-2">
                    <button 
-                     onClick={() => callUser(member._id, member.name)}
+                     onClick={() => callUser(member._id, member.name, member.avatarConfig?.image)}
                      className="flex-1 bg-white text-black hover:bg-zinc-200 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                      disabled={!isOnline(member._id)}
                      title={!isOnline(member._id) ? "User is offline" : "Start Voice Call"}

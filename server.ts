@@ -62,10 +62,10 @@ app.prepare().then(() => {
     });
 
     // Keeping these for specific initial call intent if needed, but generic is better
-    socket.on("call-user", ({ userToCall, signalData, from, name }) => {
+    socket.on("call-user", ({ userToCall, signalData, from, name, avatar }) => {
       const socketIdToCall = onlineUsers.get(userToCall);
       if (socketIdToCall) {
-        io.to(socketIdToCall).emit("call-made", { signal: signalData, from, name }); // from is userId
+        io.to(socketIdToCall).emit("call-made", { signal: signalData, from, name, avatar }); // from is userId
       }
     });
 

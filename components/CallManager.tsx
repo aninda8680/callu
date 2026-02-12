@@ -3,14 +3,15 @@ import { useEffect, useRef, useState } from "react";
 import { useSocket } from "@/context/SocketContext";
 import { useAuth } from "@/context/AuthContext";
 import { useCall } from "@/context/CallContext";
-import { Phone, PhoneOff, Mic, MicOff, PhoneIncoming } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff } from "lucide-react";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 export default function CallManager() {
   const { user } = useAuth();
   const { socket } = useSocket();
   const { outgoingCallData, setOutgoingCallData } = useCall();
   
-  const [incomingCall, setIncomingCall] = useState<{ from: string; name: string; signal: RTCSessionDescriptionInit } | null>(null);
+  const [incomingCall, setIncomingCall] = useState<{ from: string; name: string; avatar?: string; signal: RTCSessionDescriptionInit } | null>(null);
   const [callAccepted, setCallAccepted] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isMicOn, setIsMicOn] = useState(true);
@@ -24,7 +25,7 @@ export default function CallManager() {
     if (!socket) return;
 
     socket.on("call-made", (data) => {
-      setIncomingCall({ from: data.from, name: data.name, signal: data.signal });
+      setIncomingCall({ from: data.from, name: data.name, avatar: data.avatar, signal: data.signal });
     });
 
     return () => {
@@ -72,7 +73,8 @@ export default function CallManager() {
         userToCall: idToCall,
         signalData: { sdp: offer }, // Wrap nicely
         from: user?._id,
-        name: user?.name
+        name: user?.name,
+        avatar: user?.avatarConfig?.image
       });
 
       // Listen for Answer
@@ -178,25 +180,27 @@ export default function CallManager() {
         {/* Connection Status */}
         {!callAccepted && (
           <div className="flex flex-col items-center justify-center py-8">
-             {/* Show ringing animation for incoming call */}
+             {/* Show avatar for incoming call */}
              {incomingCall && (
-               <div className="relative mb-8">
-                 <div className="w-32 h-32 bg-green-500/20 rounded-full flex items-center justify-center">
-                   <div className="w-24 h-24 bg-green-500/30 rounded-full flex items-center justify-center animate-pulse">
-                     <PhoneIncoming className="w-12 h-12 text-green-500 animate-bounce" />
+               <div className="w-32 h-32 rounded-full overflow-hidden mb-6 ring-4 ring-green-500 ring-offset-4 ring-offset-zinc-900">
+                 {incomingCall.avatar ? (
+                   <img src={incomingCall.avatar} alt={incomingCall.name} className="w-full h-full object-cover" />
+                 ) : (
+                   <div className="w-full h-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                     <span className="text-4xl font-bold text-white">{incomingCall.name[0].toUpperCase()}</span>
                    </div>
-                 </div>
-                 <div className="absolute inset-0 rounded-full bg-green-500/10 animate-ping" />
+                 )}
                </div>
              )}
              {!incomingCall && outgoingCallData && (
-               <div className="relative mb-8">
-                 <div className="w-32 h-32 bg-blue-500/20 rounded-full flex items-center justify-center">
-                   <div className="w-24 h-24 bg-blue-500/30 rounded-full flex items-center justify-center animate-pulse">
-                     <Phone className="w-12 h-12 text-blue-500" />
+               <div className="w-32 h-32 rounded-full overflow-hidden mb-6 ring-4 ring-blue-500 ring-offset-4 ring-offset-zinc-900 animate-pulse">
+                 {outgoingCallData.userAvatar ? (
+                   <img src={outgoingCallData.userAvatar} alt={outgoingCallData.userName} className="w-full h-full object-cover" />
+                 ) : (
+                   <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                     <span className="text-4xl font-bold text-white">{outgoingCallData.userName[0].toUpperCase()}</span>
                    </div>
-                 </div>
-                 <div className="absolute inset-0 rounded-full bg-blue-500/10 animate-ping" />
+                 )}
                </div>
              )}
              {incomingCall ? (
@@ -236,8 +240,12 @@ export default function CallManager() {
         {/* Audio Call Connected View */}
         {callAccepted && (
           <div className="flex flex-col items-center py-8 w-full">
-            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/30">
-              <Phone className="w-16 h-16 text-white" />
+            <div className="w-48 h-48 mb-2">
+              <DotLottieReact
+                src="/Lotties/love.lottie"
+                loop
+                autoplay
+              />
             </div>
             <h3 className="text-2xl font-medium text-white mb-1">{incomingCall?.name || outgoingCallData?.userName}</h3>
             <div className="flex items-center gap-2 mb-8">
