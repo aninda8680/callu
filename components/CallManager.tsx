@@ -52,6 +52,22 @@ export default function CallManager() {
     }
   }, [outgoingCallData, callAccepted]);
 
+  // End call function (declared early so it can be used in startCall/answerCall)
+  const endCall = () => {
+    // Stop all ringtones
+    incomingRingtone.current?.pause();
+    outgoingRingtone.current?.pause();
+    if (incomingRingtone.current) incomingRingtone.current.currentTime = 0;
+    if (outgoingRingtone.current) outgoingRingtone.current.currentTime = 0;
+    
+    connectionRef.current?.close();
+    setIncomingCall(null);
+    setOutgoingCallData(null);
+    setCallAccepted(false);
+    stream?.getTracks().forEach(t => t.stop());
+    window.location.reload(); // Simplest cleanup for WebRTC state
+  };
+
   const startCall = async (idToCall: string) => {
     // 1. Get Media - Audio only for voice calls
     try {
