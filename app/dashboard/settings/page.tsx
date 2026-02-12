@@ -297,7 +297,7 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <button
                 onClick={logout}
-                className="w-full flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl hover:border-yellow-600/50 hover:bg-yellow-600/5 transition-all group"
+                className="w-full flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl hover:border-yellow-600/50 hover:bg-yellow-600/5 transition-all group cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center group-hover:bg-yellow-500/20 transition-colors">

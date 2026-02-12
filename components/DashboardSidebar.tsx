@@ -129,7 +129,7 @@ export function DashboardSidebar() {
         <button
           onClick={logout}
           className={cn(
-            "flex items-center gap-3 text-red-500 hover:text-red-400 transition-colors w-full p-2 relative",
+            "flex items-center gap-3 text-red-500 hover:text-red-400 transition-colors w-full p-2 relative cursor-pointer",
             isCollapsed ? "justify-center" : ""
           )}
         >
