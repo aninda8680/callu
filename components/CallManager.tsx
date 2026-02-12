@@ -114,8 +114,8 @@ export default function CallManager() {
 
       // Listen for Answer
       socket?.on("call-answered", async (data) => {
-        if (data.signal.sdp) {
-          await peer.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
+        if (data.signal) {
+          await peer.setRemoteDescription(new RTCSessionDescription(data.signal));
           // Stop outgoing ringtone when call is accepted
           outgoingRingtone.current?.pause();
           if (outgoingRingtone.current) outgoingRingtone.current.currentTime = 0;
@@ -168,8 +168,8 @@ export default function CallManager() {
       };
 
       // Set Remote from incoming
-      if (incomingCall.signal.sdp) {
-        await peer.setRemoteDescription(new RTCSessionDescription(incomingCall.signal.sdp));
+      if (incomingCall.signal) {
+        await peer.setRemoteDescription(new RTCSessionDescription(incomingCall.signal));
       }
 
       // Create Answer
@@ -201,22 +201,8 @@ export default function CallManager() {
     if (outgoingCallData && !callAccepted) {
       startCall(outgoingCallData.userId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outgoingCallData, callAccepted]);
-
-  const endCall = () => {
-    // Stop all ringtones
-    incomingRingtone.current?.pause();
-    outgoingRingtone.current?.pause();
-    if (incomingRingtone.current) incomingRingtone.current.currentTime = 0;
-    if (outgoingRingtone.current) outgoingRingtone.current.currentTime = 0;
-    
-    connectionRef.current?.close();
-    setIncomingCall(null);
-    setOutgoingCallData(null);
-    setCallAccepted(false);
-    stream?.getTracks().forEach(t => t.stop());
-    window.location.reload(); // Simplest cleanup for WebRTC state
-  };
 
   // UI RENDER
   if (!incomingCall && !outgoingCallData) return null;
@@ -257,13 +243,13 @@ export default function CallManager() {
                   <p className="text-zinc-400 mb-8">Incoming voice call...</p>
                   <div className="flex gap-6">
                      <div className="flex flex-col items-center gap-2">
-                       <button onClick={endCall} className="bg-red-500 hover:bg-red-600 p-5 rounded-full transition-all shadow-lg hover:shadow-red-500/50">
+                       <button onClick={endCall} className="bg-red-500 hover:bg-red-600 p-5 rounded-full transition-all shadow-lg hover:shadow-red-500/50 cursor-pointer">
                          <PhoneOff className="text-white" size={28} />
                        </button>
                        <span className="text-xs text-zinc-500">Decline</span>
                      </div>
                      <div className="flex flex-col items-center gap-2">
-                       <button onClick={answerCall} className="bg-green-500 hover:bg-green-600 p-5 rounded-full transition-all animate-bounce shadow-lg hover:shadow-green-500/50">
+                       <button onClick={answerCall} className="bg-green-500 hover:bg-green-600 p-5 rounded-full transition-all animate-bounce shadow-lg hover:shadow-green-500/50 cursor-pointer">
                          <Phone className="text-white" size={28} />
                        </button>
                        <span className="text-xs text-zinc-500">Accept</span>
@@ -275,7 +261,7 @@ export default function CallManager() {
                   <h3 className="text-2xl font-medium text-white mb-1 text-center">{outgoingCallData?.userName}</h3>
                   <p className="text-zinc-400 mb-8">Calling...</p>
                   <div className="flex flex-col items-center gap-2">
-                    <button onClick={endCall} className="bg-red-500 hover:bg-red-600 p-5 rounded-full transition-all shadow-lg hover:shadow-red-500/50">
+                    <button onClick={endCall} className="bg-red-500 hover:bg-red-600 p-5 rounded-full transition-all shadow-lg hover:shadow-red-500/50 cursor-pointer">
                       <PhoneOff className="text-white" size={28} />
                     </button>
                     <span className="text-xs text-zinc-500">End call</span>
@@ -312,7 +298,7 @@ export default function CallManager() {
                       setIsMicOn(!isMicOn);
                     }
                   }} 
-                  className={`p-4 rounded-full transition-all ${
+                  className={`p-4 rounded-full transition-all cursor-pointer ${
                     !isMicOn ? 'bg-red-500 text-white shadow-lg shadow-red-500/50' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
                   }`}
                 >
@@ -324,7 +310,7 @@ export default function CallManager() {
               <div className="flex flex-col items-center gap-2">
                 <button 
                   onClick={endCall} 
-                  className="p-5 rounded-full bg-red-500 text-white hover:bg-red-600 transition-all shadow-lg hover:shadow-red-500/50"
+                  className="p-5 rounded-full bg-red-500 text-white hover:bg-red-600 transition-all shadow-lg hover:shadow-red-500/50 cursor-pointer"
                 >
                   <PhoneOff size={28} />
                 </button>

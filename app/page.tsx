@@ -17,7 +17,7 @@ export default function Home() {
 
       <nav className="relative z-10 flex justify-between items-center px-8 py-6 w-full max-w-7xl">
         <h1 className="text-2xl font-bold tracking-tighter">CALLU.</h1>
-        <button onClick={() => setShowLogin(true)} className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+        <button onClick={() => setShowLogin(true)} className="text-sm font-medium text-zinc-400 hover:text-white transition-colors cursor-pointer">
             Member Area
         </button>
       </nav>
@@ -40,7 +40,7 @@ export default function Home() {
         
         <button 
           onClick={() => setShowApply(true)}
-          className="bg-white text-black text-lg font-medium px-10 py-5 rounded-full hover:scale-105 transition-transform duration-300"
+          className="bg-white text-black text-lg font-medium px-10 py-5 rounded-full hover:scale-105 transition-transform duration-300 cursor-pointer"
         >
             Apply to Join Community
         </button>

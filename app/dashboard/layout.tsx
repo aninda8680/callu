@@ -62,7 +62,7 @@ export default function DashboardLayout({
                           <p className="text-xs text-zinc-500">Online</p>
                       </div>
                    </div>
-                   <button onClick={logout} className="flex items-center gap-2 text-zinc-500 hover:text-red-400 transition-colors text-sm">
+                   <button onClick={logout} className="flex items-center gap-2 text-zinc-500 hover:text-red-400 transition-colors text-sm cursor-pointer">
                        <LogOut size={16} /> Sign Out
                    </button>
               </div>

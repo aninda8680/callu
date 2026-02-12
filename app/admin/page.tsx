@@ -89,13 +89,13 @@ export default function AdminPage() {
         <div className="flex gap-2 bg-zinc-900 p-1 rounded-lg">
           <button 
             onClick={() => setActiveTab('pending')}
-            className={`px-4 py-2 rounded-md text-sm transition-colors ${activeTab === 'pending' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white'}`}
+            className={`px-4 py-2 rounded-md text-sm transition-colors cursor-pointer ${activeTab === 'pending' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white'}`}
           >
             Pending ({pendingUsers.length})
           </button>
           <button 
             onClick={() => setActiveTab('approved')}
-            className={`px-4 py-2 rounded-md text-sm transition-colors ${activeTab === 'approved' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white'}`}
+            className={`px-4 py-2 rounded-md text-sm transition-colors cursor-pointer ${activeTab === 'approved' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white'}`}
           >
             Approved ({approvedUsers.length})
           </button>
@@ -123,13 +123,13 @@ export default function AdminPage() {
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => handleApprove(user._id)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-zinc-100 text-black hover:bg-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 bg-zinc-100 text-black hover:bg-white px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer"
                   >
                     <Check size={16} /> Approve
                   </button>
                   <button
                     onClick={() => handleDelete(user._id)}
-                    className="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
+                    className="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors cursor-pointer"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -138,13 +138,13 @@ export default function AdminPage() {
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => handleRevoke(user._id)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 px-4 py-2 rounded-xl text-sm font-medium transition-colors border border-orange-500/20"
+                    className="flex-1 flex items-center justify-center gap-2 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 px-4 py-2 rounded-xl text-sm font-medium transition-colors border border-orange-500/20 cursor-pointer"
                   >
                     <Ban size={16} /> Revoke
                   </button>
                   <button
                     onClick={() => handleDelete(user._id)}
-                    className="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
+                    className="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors cursor-pointer"
                   >
                     <Trash2 size={16} />
                   </button>

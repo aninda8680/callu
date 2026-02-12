@@ -99,13 +99,13 @@ export default function DashboardPage() {
                 <div className="mt-8 flex gap-2">
                    <button 
                      onClick={() => callUser(member._id, member.name, member.avatarConfig?.image)}
-                     className="flex-1 bg-white text-black hover:bg-zinc-200 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                     className="flex-1 bg-white text-black hover:bg-zinc-200 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                      disabled={!isOnline(member._id)}
                      title={!isOnline(member._id) ? "User is offline" : "Start Voice Call"}
                    >
                       <Mic size={18} /> Call
                    </button>
-                   <button className="px-4 py-3 rounded-xl bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors">
+                   <button className="px-4 py-3 rounded-xl bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer">
                       <Video size={18} />
                    </button>
                 </div>

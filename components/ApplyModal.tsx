@@ -41,7 +41,7 @@ export default function ApplyModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <h3 className="text-2xl text-white font-serif mb-2">Application Received</h3>
                 <p className="text-zinc-400 mb-6">We will review your profile. You will be notified via email.</p>
-                <button onClick={onClose} className="bg-white text-black px-8 py-3 rounded-full font-medium hover:bg-zinc-200">
+                <button onClick={onClose} className="bg-white text-black px-8 py-3 rounded-full font-medium hover:bg-zinc-200 cursor-pointer">
                     Close
                 </button>
             </div>
@@ -52,7 +52,7 @@ export default function ApplyModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden relative">
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white">
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white cursor-pointer">
           <X size={20} />
         </button>
 
@@ -96,7 +96,7 @@ export default function ApplyModal({ onClose }: { onClose: () => void }) {
                 <button 
                     disabled={loading}
                     type="submit" 
-                    className="w-full bg-white text-black font-medium text-lg py-4 rounded-xl hover:bg-zinc-200 transition-all mt-4 flex items-center justify-center gap-2"
+                    className="w-full bg-white text-black font-medium text-lg py-4 rounded-xl hover:bg-zinc-200 transition-all mt-4 flex items-center justify-center gap-2 cursor-pointer"
                 >
                     {loading ? <Loader2 className="animate-spin" /> : "Submit Application"}
                 </button>
@@ -132,7 +132,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl p-8 relative">
-            <button onClick={onClose} className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white">
+            <button onClick={onClose} className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white cursor-pointer">
               <X size={20} />
             </button>
             <h2 className="text-2xl font-light text-white mb-6">{isAdminMode ? "Admin Login" : "Member Login"}</h2>
@@ -140,13 +140,13 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
             <div className="flex gap-2 mb-6">
                 <button 
                     onClick={() => setIsAdminMode(false)}
-                    className={`flex-1 py-2 rounded-lg text-sm transition-colors ${!isAdminMode ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white'}`}
+                    className={`flex-1 py-2 rounded-lg text-sm transition-colors cursor-pointer ${!isAdminMode ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white'}`}
                 >
                     Member
                 </button>
                 <button 
                     onClick={() => setIsAdminMode(true)}
-                    className={`flex-1 py-2 rounded-lg text-sm transition-colors ${isAdminMode ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white'}`}
+                    className={`flex-1 py-2 rounded-lg text-sm transition-colors cursor-pointer ${isAdminMode ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white'}`}
                 >
                     Admin
                 </button>
@@ -193,7 +193,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
                  <button 
                     disabled={loading}
                     type="submit" 
-                    className="w-full bg-zinc-800 text-white font-medium text-lg py-4 rounded-xl hover:bg-zinc-700 transition-all mt-4 flex items-center justify-center gap-2"
+                    className="w-full bg-zinc-800 text-white font-medium text-lg py-4 rounded-xl hover:bg-zinc-700 transition-all mt-4 flex items-center justify-center gap-2 cursor-pointer"
                 >
                     {loading ? <Loader2 className="animate-spin" /> : "Enter"}
                 </button>
