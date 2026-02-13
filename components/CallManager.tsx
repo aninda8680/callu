@@ -126,10 +126,10 @@ export default function CallManager() {
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
 
-      // Emit Call
+      // Emit Call (send full offer with type and sdp)
       socket?.emit("call-user", {
         userToCall: idToCall,
-        signalData: { sdp: offer }, // Wrap nicely
+        signalData: offer, // Contains both type and sdp
         from: user?._id,
         name: user?.name,
         avatar: user?.avatarConfig?.image
@@ -137,12 +137,14 @@ export default function CallManager() {
 
       // Listen for Answer
       socket?.on("call-answered", async (data) => {
-        if (data.signal) {
+        if (data.signal && data.signal.type && data.signal.sdp) {
           await peer.setRemoteDescription(new RTCSessionDescription(data.signal));
           // Stop outgoing ringtone when call is accepted
           outgoingRingtone.current?.pause();
           if (outgoingRingtone.current) outgoingRingtone.current.currentTime = 0;
           setCallAccepted(true);
+        } else {
+          console.error("Invalid signal data received in call-answered:", data.signal);
         }
       });
 
@@ -191,17 +193,20 @@ export default function CallManager() {
       };
 
       // Set Remote from incoming
-      if (incomingCall.signal) {
+      if (incomingCall.signal && incomingCall.signal.type && incomingCall.signal.sdp) {
         await peer.setRemoteDescription(new RTCSessionDescription(incomingCall.signal));
+      } else {
+        console.error("Invalid signal data in incoming call:", incomingCall.signal);
+        throw new Error("Invalid call signal data");
       }
 
       // Create Answer
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
 
-      // Emit Answer
+      // Emit Answer (send full answer with type and sdp)
       socket?.emit("answer-call", {
-        signal: { sdp: answer },
+        signal: answer, // Contains both type and sdp
         to: incomingCall.from,
         from: user?._id
       });
