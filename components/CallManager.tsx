@@ -16,49 +16,51 @@ export default function CallManager() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isMicOn, setIsMicOn] = useState(true);
   const [audioBlocked, setAudioBlocked] = useState(false);
+  const [ringtoneMuted, setRingtoneMuted] = useState(false);
   
   const myVideo = useRef<HTMLVideoElement>(null);
   const userVideo = useRef<HTMLVideoElement>(null);
   const connectionRef = useRef<RTCPeerConnection | null>(null);
   const incomingRingtone = useRef<HTMLAudioElement | null>(null);
   const outgoingRingtone = useRef<HTMLAudioElement | null>(null);
-  const mediaPrimed = useRef(false); // Track if media has been primed
 
-  // Function to prime all media elements with user gesture
-  const primeAllMedia = () => {
-    if (mediaPrimed.current) {
-      console.log("⏭️ Media already primed, skipping");
-      return;
+  // Function to attempt playing ringtone with fallback strategies
+  const playRingtone = (audio: HTMLAudioElement | null, name: string) => {
+    if (!audio) return;
+    
+    audio.currentTime = 0;
+    audio.volume = 1;
+    audio.muted = false;
+    audio.loop = true;
+    
+    // Try playing unmuted first
+    const playPromise = audio.play();
+    
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          console.log(`🔔 ${name} playing successfully`);
+        })
+        .catch(err => {
+          console.log(`🔇 ${name} blocked unmuted, trying muted`, err.message);
+          // If blocked, try muted
+          audio.muted = true;
+          audio.play()
+            .then(() => {
+              console.log(`🔕 ${name} playing muted (unmute when user interacts)`);
+            })
+            .catch(e => {
+              console.error(`❌ ${name} completely blocked:`, e.message);
+            });
+        });
     }
+  };
 
-    console.log("🎯 Priming all media elements with user gesture...");
-
-    // Prime ringtones with muted playback first
-    if (incomingRingtone.current && outgoingRingtone.current) {
-      const primeAudio = (audio: HTMLAudioElement, name: string) => {
-        audio.muted = true; // Muted autoplay is allowed
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.muted = false; // Unmute after successful play
-          audio.volume = 1;
-          console.log(`✅ ${name} primed with muted autoplay`);
-        }).catch(() => console.log(`⏸️ ${name} blocked even when muted`));
-      };
-
-      primeAudio(incomingRingtone.current, "Incoming ringtone");
-      primeAudio(outgoingRingtone.current, "Outgoing ringtone");
-    }
-
-    // Prime video element - set muted for autoplay
-    if (userVideo.current) {
-      userVideo.current.muted = false; // WebRTC audio should NOT be muted
-      userVideo.current.volume = 1;
-      console.log("✅ WebRTC audio element configured for unmuted playback");
-    }
-
-    mediaPrimed.current = true;
-    console.log("🎉 Media priming complete!");
+  // Function to stop ringtone
+  const stopRingtone = (audio: HTMLAudioElement | null) => {
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
   };
 
   // Initialize audio on mount
@@ -70,16 +72,24 @@ export default function CallManager() {
     outgoingRingtone.current.loop = true;
     outgoingRingtone.current.volume = 1;
 
-    // Don't prime on mount - wait for user gesture (call action)
+    // Poll for muted ringtones to show banner
+    const interval = setInterval(() => {
+      const incoming = incomingRingtone.current;
+      const outgoing = outgoingRingtone.current;
+      const isMuted = 
+        (incoming && !incoming.paused && incoming.muted) ||
+        (outgoing && !outgoing.paused && outgoing.muted);
+      setRingtoneMuted(isMuted);
+    }, 100);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Local cleanup without emitting (used when receiving call-ended event)
   const endCallLocally = () => {
     // Stop all ringtones
-    incomingRingtone.current?.pause();
-    outgoingRingtone.current?.pause();
-    if (incomingRingtone.current) incomingRingtone.current.currentTime = 0;
-    if (outgoingRingtone.current) outgoingRingtone.current.currentTime = 0;
+    stopRingtone(incomingRingtone.current);
+    stopRingtone(outgoingRingtone.current);
     
     // Close peer connection
     if (connectionRef.current) {
@@ -132,8 +142,10 @@ export default function CallManager() {
     socket.on("call-made", (data) => {
       setIncomingCall({ from: data.from, name: data.name, avatar: data.avatar, signal: data.signal });
       setIsInCall(true);
-      // Play incoming ringtone - will work after user clicks accept/decline
-      console.log("📞 Incoming call - ringtone will play on user interaction");
+      
+      // Play incoming ringtone immediately
+      console.log("📞 Incoming call from", data.name);
+      playRingtone(incomingRingtone.current, "Incoming ringtone");
     });
 
     // Listen for call ended by other party
@@ -151,21 +163,12 @@ export default function CallManager() {
   // Play outgoing ringtone when making a call
   useEffect(() => {
     if (outgoingCallData && !callAccepted) {
-      // Prime media with user gesture (call button was clicked)
-      primeAllMedia();
-      
-      // Play with fallback to muted if blocked
-      if (outgoingRingtone.current) {
-        outgoingRingtone.current.volume = 1;
-        outgoingRingtone.current.muted = false;
-        outgoingRingtone.current.play().catch(err => {
-          console.log("🔇 Outgoing ringtone blocked, trying muted");
-          if (outgoingRingtone.current) {
-            outgoingRingtone.current.muted = true;
-            outgoingRingtone.current.play().catch(e => console.log("❌ Even muted ringtone failed"));
-          }
-        });
-      }
+      // User just clicked the call button - this is a user gesture!
+      console.log("📞 Calling", outgoingCallData.userName);
+      playRingtone(outgoingRingtone.current, "Outgoing ringtone");
+    } else if (callAccepted) {
+      // Stop ringtone when call is accepted
+      stopRingtone(outgoingRingtone.current);
     }
   }, [outgoingCallData, callAccepted]);
 
@@ -303,8 +306,7 @@ export default function CallManager() {
           await peer.setRemoteDescription(new RTCSessionDescription(data.signal));
           console.log("[CALLER] Set remote description (answer)");
           // Stop outgoing ringtone when call is accepted
-          outgoingRingtone.current?.pause();
-          if (outgoingRingtone.current) outgoingRingtone.current.currentTime = 0;
+          stopRingtone(outgoingRingtone.current);
           setCallAccepted(true);
         } else {
           console.error("[CALLER] Invalid signal data received in call-answered:", data.signal);
@@ -339,6 +341,17 @@ export default function CallManager() {
   };
 
   const enableAudio = () => {
+    // Unmute ringtones if they're playing muted
+    if (incomingRingtone.current && !incomingRingtone.current.paused && incomingRingtone.current.muted) {
+      incomingRingtone.current.muted = false;
+      console.log("🔊 Unmuted incoming ringtone on user click");
+    }
+    if (outgoingRingtone.current && !outgoingRingtone.current.paused && outgoingRingtone.current.muted) {
+      outgoingRingtone.current.muted = false;
+      console.log("🔊 Unmuted outgoing ringtone on user click");
+    }
+    
+    // Unmute/play WebRTC audio if blocked
     if (userVideo.current && audioBlocked) {
       userVideo.current.play().then(() => {
         console.log("✅ Audio enabled by user click");
@@ -352,22 +365,14 @@ export default function CallManager() {
   const answerCall = async () => {
     if (!incomingCall) return;
     
-    // Prime media with user gesture (answer button was clicked)
-    primeAllMedia();
-    
-    // Play incoming ringtone now that user clicked
-    if (incomingRingtone.current) {
+    // User clicked accept - this is a user gesture, unmute ringtone if it was playing muted
+    if (incomingRingtone.current && incomingRingtone.current.muted) {
       incomingRingtone.current.muted = false;
-      incomingRingtone.current.volume = 1;
-      incomingRingtone.current.play().then(() => {
-        console.log("🔔 Incoming ringtone playing");
-        // Stop after a moment since we're answering
-        setTimeout(() => {
-          incomingRingtone.current?.pause();
-          if (incomingRingtone.current) incomingRingtone.current.currentTime = 0;
-        }, 500);
-      }).catch(err => console.log("🔇 Ringtone play failed:", err));
+      console.log("🔊 Unmuted incoming ringtone");
     }
+    
+    // Stop ringtone since we're answering
+    stopRingtone(incomingRingtone.current);
     
     setCallAccepted(true);
 
@@ -539,6 +544,13 @@ export default function CallManager() {
         {audioBlocked && callAccepted && (
           <div className="absolute top-4 left-4 right-4 bg-yellow-500/90 text-black px-4 py-2 rounded-xl text-sm font-medium text-center animate-pulse">
             🔊 Click anywhere to enable audio
+          </div>
+        )}
+        
+        {/* Ringtone Muted Banner */}
+        {ringtoneMuted && !callAccepted && (
+          <div className="absolute top-4 left-4 right-4 bg-orange-500/90 text-white px-4 py-2 rounded-xl text-sm font-medium text-center animate-pulse">
+            🔇 Ringtone is muted - Click to unmute
           </div>
         )}
         
