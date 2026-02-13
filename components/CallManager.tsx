@@ -15,6 +15,7 @@ export default function CallManager() {
   const [callAccepted, setCallAccepted] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isMicOn, setIsMicOn] = useState(true);
+  const [audioBlocked, setAudioBlocked] = useState(false);
   
   const myVideo = useRef<HTMLVideoElement>(null);
   const userVideo = useRef<HTMLVideoElement>(null);
@@ -23,50 +24,37 @@ export default function CallManager() {
   const outgoingRingtone = useRef<HTMLAudioElement | null>(null);
   const mediaPrimed = useRef(false); // Track if media has been primed
 
-  // Function to prime all media elements
+  // Function to prime all media elements with user gesture
   const primeAllMedia = () => {
     if (mediaPrimed.current) {
       console.log("⏭️ Media already primed, skipping");
       return;
     }
 
-    console.log("🎯 Priming all media elements...");
+    console.log("🎯 Priming all media elements with user gesture...");
 
-    // Prime ringtones
+    // Prime ringtones with muted playback first
     if (incomingRingtone.current && outgoingRingtone.current) {
       const primeAudio = (audio: HTMLAudioElement, name: string) => {
-        audio.volume = 0.01;
+        audio.muted = true; // Muted autoplay is allowed
         audio.play().then(() => {
           audio.pause();
           audio.currentTime = 0;
+          audio.muted = false; // Unmute after successful play
           audio.volume = 1;
-          console.log(`✅ ${name} primed`);
-        }).catch(() => console.log(`⏸️ ${name} blocked`));
+          console.log(`✅ ${name} primed with muted autoplay`);
+        }).catch(() => console.log(`⏸️ ${name} blocked even when muted`));
       };
 
       primeAudio(incomingRingtone.current, "Incoming ringtone");
       primeAudio(outgoingRingtone.current, "Outgoing ringtone");
     }
 
-    // Prime video element for WebRTC
+    // Prime video element - set muted for autoplay
     if (userVideo.current) {
-      try {
-        const audioContext = new AudioContext();
-        const oscillator = audioContext.createOscillator();
-        const dst = oscillator.connect(audioContext.createMediaStreamDestination());
-        oscillator.start();
-        const silentStream = (dst as any).stream as MediaStream;
-        
-        userVideo.current.srcObject = silentStream;
-        userVideo.current.volume = 1;
-        userVideo.current.play().then(() => {
-          oscillator.stop();
-          userVideo.current!.srcObject = null;
-          console.log("✅ WebRTC audio element primed");
-        }).catch(() => console.log("⏸️ WebRTC element blocked"));
-      } catch (e) {
-        console.log("⚠️ AudioContext not available:", e);
-      }
+      userVideo.current.muted = false; // WebRTC audio should NOT be muted
+      userVideo.current.volume = 1;
+      console.log("✅ WebRTC audio element configured for unmuted playback");
     }
 
     mediaPrimed.current = true;
@@ -77,11 +65,12 @@ export default function CallManager() {
   useEffect(() => {
     incomingRingtone.current = new Audio("/music/callin.mp3");
     incomingRingtone.current.loop = true;
+    incomingRingtone.current.volume = 1;
     outgoingRingtone.current = new Audio("/music/ringing.mp3");
     outgoingRingtone.current.loop = true;
+    outgoingRingtone.current.volume = 1;
 
-    // Try priming immediately (usually fails but worth trying)
-    primeAllMedia();
+    // Don't prime on mount - wait for user gesture (call action)
   }, []);
 
   // Handle Socket Events for Incoming Calls
@@ -89,13 +78,10 @@ export default function CallManager() {
     if (!socket) return;
 
     socket.on("call-made", (data) => {
-      // Auto-prime media on incoming call
-      primeAllMedia();
-      
       setIncomingCall({ from: data.from, name: data.name, avatar: data.avatar, signal: data.signal });
       setIsInCall(true);
-      // Play incoming ringtone
-      incomingRingtone.current?.play().catch(err => console.log("Audio play failed:", err));
+      // Play incoming ringtone - will work after user clicks accept/decline
+      console.log("📞 Incoming call - ringtone will play on user interaction");
     });
 
     return () => {
@@ -106,10 +92,21 @@ export default function CallManager() {
   // Play outgoing ringtone when making a call
   useEffect(() => {
     if (outgoingCallData && !callAccepted) {
-      // Auto-prime media when user initiates a call
+      // Prime media with user gesture (call button was clicked)
       primeAllMedia();
       
-      outgoingRingtone.current?.play().catch(err => console.log("Audio play failed:", err));
+      // Play with fallback to muted if blocked
+      if (outgoingRingtone.current) {
+        outgoingRingtone.current.volume = 1;
+        outgoingRingtone.current.muted = false;
+        outgoingRingtone.current.play().catch(err => {
+          console.log("🔇 Outgoing ringtone blocked, trying muted");
+          if (outgoingRingtone.current) {
+            outgoingRingtone.current.muted = true;
+            outgoingRingtone.current.play().catch(e => console.log("❌ Even muted ringtone failed"));
+          }
+        });
+      }
     }
   }, [outgoingCallData, callAccepted]);
 
@@ -160,13 +157,33 @@ export default function CallManager() {
 
       console.log("[CALLER] Got local stream with tracks:", currentStream.getTracks().map(t => t.kind));
 
-      // 2. Create Peer with better ICE servers (Google STUN + Twilio TURN)
+      // 2. Create Peer with STUN + TURN servers for better connectivity
       const peer = new RTCPeerConnection({
         iceServers: [
+          // Google STUN servers
           { urls: "stun:stun.l.google.com:19302" },
           { urls: "stun:stun1.l.google.com:19302" },
           { urls: "stun:stun2.l.google.com:19302" },
-        ]
+          { urls: "stun:stun3.l.google.com:19302" },
+          { urls: "stun:stun4.l.google.com:19302" },
+          // Free TURN servers for NAT traversal (OpenRelay)
+          { 
+            urls: "turn:openrelay.metered.ca:80",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+          },
+          { 
+            urls: "turn:openrelay.metered.ca:443",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+          },
+          { 
+            urls: "turn:openrelay.metered.ca:443?transport=tcp",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+          }
+        ],
+        iceCandidatePoolSize: 10
       });
       connectionRef.current = peer;
 
@@ -176,13 +193,28 @@ export default function CallManager() {
         console.log("[CALLER] Added track:", track.kind, track.enabled);
       });
 
-      // Monitor connection state
+      // Monitor connection state with failure recovery
       peer.onconnectionstatechange = () => {
         console.log("[CALLER] Connection state:", peer.connectionState);
+        if (peer.connectionState === "failed") {
+          console.error("❌ [CALLER] Connection failed! Attempting ICE restart...");
+          // Try to recover by restarting ICE
+          peer.restartIce();
+        } else if (peer.connectionState === "connected") {
+          console.log("✅ [CALLER] Connection established successfully!");
+        }
       };
 
       peer.oniceconnectionstatechange = () => {
         console.log("[CALLER] ICE connection state:", peer.iceConnectionState);
+        if (peer.iceConnectionState === "failed") {
+          console.error("❌ [CALLER] ICE connection failed! Check network/firewall.");
+        }
+      };
+
+      // Monitor ICE gathering state
+      peer.onicegatheringstatechange = () => {
+        console.log("[CALLER] ICE gathering state:", peer.iceGatheringState);
       };
 
       // Handle ICE
@@ -198,17 +230,18 @@ export default function CallManager() {
         console.log("[CALLER] Received remote track:", event.track.kind, event.streams.length);
         if (userVideo.current && event.streams[0]) {
           userVideo.current.srcObject = event.streams[0];
-          userVideo.current.volume = 1; // Ensure volume is set
+          userVideo.current.muted = false; // Ensure NOT muted for call audio
+          userVideo.current.volume = 1;
           console.log("[CALLER] Set remote stream, tracks:", event.streams[0].getTracks().map(t => `${t.kind} enabled:${t.enabled}`));
-          // Explicitly play
+          
+          // Play immediately - browser should allow since user initiated call
           userVideo.current.play().then(() => {
-            console.log("✅ [CALLER] Remote audio playing - volume:", userVideo.current!.volume);
+            console.log("✅ [CALLER] Remote audio playing - volume:", userVideo.current!.volume, "muted:", userVideo.current!.muted);
+            setAudioBlocked(false);
           }).catch(err => {
-            console.error("❌ [CALLER] Remote audio play failed:", err);
-            // Try again after a brief delay
-            setTimeout(() => {
-              userVideo.current?.play().catch(e => console.error("❌ [CALLER] Retry failed:", e));
-            }, 100);
+            console.error("❌ [CALLER] Remote audio blocked:", err);
+            setAudioBlocked(true);
+            console.log("👆 [CALLER] User interaction required - click anywhere to enable audio");
           });
         }
       };
@@ -256,12 +289,44 @@ export default function CallManager() {
     }
   };
 
+  const toggleMic = () => {
+    const audioTrack = stream?.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = !isMicOn;
+      setIsMicOn(!isMicOn);
+    }
+  };
+
+  const enableAudio = () => {
+    if (userVideo.current && audioBlocked) {
+      userVideo.current.play().then(() => {
+        console.log("✅ Audio enabled by user click");
+        setAudioBlocked(false);
+      }).catch(err => {
+        console.error("❌ Still blocked:", err);
+      });
+    }
+  };
+
   const answerCall = async () => {
     if (!incomingCall) return;
     
-    // Stop ringtones
-    incomingRingtone.current?.pause();
-    if (incomingRingtone.current) incomingRingtone.current.currentTime = 0;
+    // Prime media with user gesture (answer button was clicked)
+    primeAllMedia();
+    
+    // Play incoming ringtone now that user clicked
+    if (incomingRingtone.current) {
+      incomingRingtone.current.muted = false;
+      incomingRingtone.current.volume = 1;
+      incomingRingtone.current.play().then(() => {
+        console.log("🔔 Incoming ringtone playing");
+        // Stop after a moment since we're answering
+        setTimeout(() => {
+          incomingRingtone.current?.pause();
+          if (incomingRingtone.current) incomingRingtone.current.currentTime = 0;
+        }, 500);
+      }).catch(err => console.log("🔇 Ringtone play failed:", err));
+    }
     
     setCallAccepted(true);
 
@@ -272,13 +337,33 @@ export default function CallManager() {
 
        console.log("[ANSWERER] Got local stream with tracks:", currentStream.getTracks().map(t => t.kind));
 
-       // Create Peer with better ICE servers
+       // Create Peer with STUN + TURN servers for better connectivity
        const peer = new RTCPeerConnection({
         iceServers: [
+          // Google STUN servers
           { urls: "stun:stun.l.google.com:19302" },
           { urls: "stun:stun1.l.google.com:19302" },
           { urls: "stun:stun2.l.google.com:19302" },
-        ]
+          { urls: "stun:stun3.l.google.com:19302" },
+          { urls: "stun:stun4.l.google.com:19302" },
+          // Free TURN servers for NAT traversal (OpenRelay)
+          { 
+            urls: "turn:openrelay.metered.ca:80",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+          },
+          { 
+            urls: "turn:openrelay.metered.ca:443",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+          },
+          { 
+            urls: "turn:openrelay.metered.ca:443?transport=tcp",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+          }
+        ],
+        iceCandidatePoolSize: 10
       });
       connectionRef.current = peer;
 
@@ -288,13 +373,27 @@ export default function CallManager() {
         console.log("[ANSWERER] Added track:", track.kind, track.enabled);
       });
 
-      // Monitor connection state
+      // Monitor connection state with failure recovery
       peer.onconnectionstatechange = () => {
         console.log("[ANSWERER] Connection state:", peer.connectionState);
+        if (peer.connectionState === "failed") {
+          console.error("❌ [ANSWERER] Connection failed! Attempting ICE restart...");
+          peer.restartIce();
+        } else if (peer.connectionState === "connected") {
+          console.log("✅ [ANSWERER] Connection established successfully!");
+        }
       };
 
       peer.oniceconnectionstatechange = () => {
         console.log("[ANSWERER] ICE connection state:", peer.iceConnectionState);
+        if (peer.iceConnectionState === "failed") {
+          console.error("❌ [ANSWERER] ICE connection failed! Check network/firewall.");
+        }
+      };
+
+      // Monitor ICE gathering state
+      peer.onicegatheringstatechange = () => {
+        console.log("[ANSWERER] ICE gathering state:", peer.iceGatheringState);
       };
 
       peer.onicecandidate = (event) => {
@@ -308,17 +407,18 @@ export default function CallManager() {
         console.log("[ANSWERER] Received remote track:", event.track.kind, event.streams.length);
         if (userVideo.current && event.streams[0]) {
           userVideo.current.srcObject = event.streams[0];
-          userVideo.current.volume = 1; // Ensure volume is set
+          userVideo.current.muted = false; // Ensure NOT muted for call audio
+          userVideo.current.volume = 1;
           console.log("[ANSWERER] Set remote stream, tracks:", event.streams[0].getTracks().map(t => `${t.kind} enabled:${t.enabled}`));
-          // Explicitly play
+          
+          // Play immediately - browser should allow since user clicked answer
           userVideo.current.play().then(() => {
-            console.log("✅ [ANSWERER] Remote audio playing - volume:", userVideo.current!.volume);
+            console.log("✅ [ANSWERER] Remote audio playing - volume:", userVideo.current!.volume, "muted:", userVideo.current!.muted);
+            setAudioBlocked(false);
           }).catch(err => {
-            console.error("❌ [ANSWERER] Remote audio play failed:", err);
-            // Try again after a brief delay
-            setTimeout(() => {
-              userVideo.current?.play().catch(e => console.error("❌ [ANSWERER] Retry failed:", e));
-            }, 100);
+            console.error("❌ [ANSWERER] Remote audio blocked:", err);
+            setAudioBlocked(true);
+            console.log("👆 [ANSWERER] User interaction required - click anywhere to enable audio");
           });
         }
       };
@@ -370,8 +470,15 @@ export default function CallManager() {
   if (!incomingCall && !outgoingCallData) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md" onClick={enableAudio}>
       <div className="bg-zinc-900 border border-zinc-700 rounded-3xl p-8 w-full max-w-md mx-4 flex flex-col items-center relative shadow-2xl">
+        
+        {/* Audio Blocked Banner */}
+        {audioBlocked && callAccepted && (
+          <div className="absolute top-4 left-4 right-4 bg-yellow-500/90 text-black px-4 py-2 rounded-xl text-sm font-medium text-center animate-pulse">
+            🔊 Click anywhere to enable audio
+          </div>
+        )}
         
         {/* Connection Status */}
         {!callAccepted && (
@@ -462,13 +569,7 @@ export default function CallManager() {
             <div className="flex items-center gap-6">
               <div className="flex flex-col items-center gap-2">
                 <button 
-                  onClick={() => {
-                    const audioTrack = stream?.getAudioTracks()[0];
-                    if (audioTrack) {
-                      audioTrack.enabled = !isMicOn;
-                      setIsMicOn(!isMicOn);
-                    }
-                  }} 
+                  onClick={toggleMic} 
                   className={`p-4 rounded-full transition-all cursor-pointer ${
                     !isMicOn ? 'bg-red-500 text-white shadow-lg shadow-red-500/50' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
                   }`}
@@ -491,10 +592,10 @@ export default function CallManager() {
           </div>
         )}
         
-        {/* Hidden video elements for audio-only call */}
+        {/* Hidden video elements for audio streaming */}
         <div className="hidden">
           <video playsInline muted ref={myVideo} autoPlay />
-          <video playsInline ref={userVideo} autoPlay />
+          <video playsInline ref={userVideo} autoPlay controls={false} />
         </div>
       </div>
     </div>
