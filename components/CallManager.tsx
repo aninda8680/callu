@@ -726,7 +726,7 @@ export default function CallManager() {
             playsInline
             muted
             ref={myVideo}
-            autoplay
+            autoPlay
             className="absolute bottom-1 right-1 w-16 h-16 rounded-lg object-cover border border-zinc-600"
           />
         )}
