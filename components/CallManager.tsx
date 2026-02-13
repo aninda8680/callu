@@ -22,12 +22,60 @@ export default function CallManager() {
   const incomingRingtone = useRef<HTMLAudioElement | null>(null);
   const outgoingRingtone = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize audio on mount
+  // Initialize audio on mount and prime them for autoplay
   useEffect(() => {
     incomingRingtone.current = new Audio("/music/callin.mp3");
     incomingRingtone.current.loop = true;
     outgoingRingtone.current = new Audio("/music/ringing.mp3");
     outgoingRingtone.current.loop = true;
+
+    // Prime audio elements to bypass autoplay policy
+    // Play and immediately pause to "unlock" audio for future use
+    const primeAudio = () => {
+      if (incomingRingtone.current) {
+        incomingRingtone.current.volume = 0.01;
+        incomingRingtone.current.play().then(() => {
+          incomingRingtone.current?.pause();
+          if (incomingRingtone.current) {
+            incomingRingtone.current.currentTime = 0;
+            incomingRingtone.current.volume = 1;
+          }
+        }).catch(() => {/* Autoplay blocked, will be unlocked on first user interaction */});
+      }
+      if (outgoingRingtone.current) {
+        outgoingRingtone.current.volume = 0.01;
+        outgoingRingtone.current.play().then(() => {
+          outgoingRingtone.current?.pause();
+          if (outgoingRingtone.current) {
+            outgoingRingtone.current.currentTime = 0;
+            outgoingRingtone.current.volume = 1;
+          }
+        }).catch(() => {/* Autoplay blocked, will be unlocked on first user interaction */});
+      }
+    };
+
+    // Try to prime immediately (might fail if no user interaction yet)
+    primeAudio();
+
+    // Also prime on any user interaction
+    const interactionEvents = ['click', 'touchstart', 'keydown'];
+    const primeOnInteraction = () => {
+      primeAudio();
+      // Remove listeners after first interaction
+      interactionEvents.forEach(event => {
+        document.removeEventListener(event, primeOnInteraction);
+      });
+    };
+
+    interactionEvents.forEach(event => {
+      document.addEventListener(event, primeOnInteraction, { once: true });
+    });
+
+    return () => {
+      interactionEvents.forEach(event => {
+        document.removeEventListener(event, primeOnInteraction);
+      });
+    };
   }, []);
 
   // Handle Socket Events for Incoming Calls
