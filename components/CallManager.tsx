@@ -1240,6 +1240,79 @@ export default function CallManager() {
 
   if (isMinimized && callAccepted) {
     const displayName = incomingCall?.name || outgoingCallData?.userName || "Call";
+    const isVoiceCall = outgoingCallData?.callType === "voice" || incomingCall?.callType === "voice";
+
+    if (isVoiceCall) {
+      // ─── VOICE CALL minimized ──────────────────────────────────
+      return (
+        <div className="fixed bottom-6 right-6 z-50 rounded-2xl overflow-hidden shadow-2xl w-64 bg-zinc-900 border border-zinc-700 cursor-pointer" onClick={enableAudio}>
+          <div className="flex items-center gap-3 p-3">
+            {/* Lottie avatar */}
+            <div className="w-12 h-12 flex-shrink-0">
+              <DotLottieReact src="/Lotties/love.lottie" loop autoplay />
+            </div>
+
+            {/* Name + status */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-white truncate">{displayName}</span>
+                <img src="/Verification-Blue-Tick-PNG.webp" alt="Verified" className="w-4 h-4 flex-shrink-0" />
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-[11px] text-emerald-400">On call</span>
+                {/* Speaking indicator */}
+                {isRemoteSpeaking && (
+                  <div className="flex items-center gap-0.5 ml-1">
+                    <span className="w-0.5 bg-emerald-400 rounded-full" style={{ height: "3px", animation: "soundwave 0.6s ease-in-out infinite", animationDelay: "0s" }}></span>
+                    <span className="w-0.5 bg-emerald-400 rounded-full" style={{ height: "5px", animation: "soundwave 0.6s ease-in-out infinite", animationDelay: "0.1s" }}></span>
+                    <span className="w-0.5 bg-emerald-400 rounded-full" style={{ height: "3px", animation: "soundwave 0.6s ease-in-out infinite", animationDelay: "0.2s" }}></span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center justify-between px-3 pb-3">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMinimized(false);
+              }}
+              className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 cursor-pointer"
+              aria-label="Restore call"
+            >
+              <Maximize2 size={14} />
+            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleMic();
+                }}
+                className={`p-1.5 rounded-lg ${!isMicOn ? "bg-red-600/80" : "bg-zinc-800/80"} text-white cursor-pointer`}
+                aria-label="Toggle mic"
+              >
+                {isMicOn ? <Mic size={14} /> : <MicOff size={14} />}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  endCall();
+                }}
+                className="p-1.5 rounded-lg bg-red-600/80 text-white cursor-pointer"
+                aria-label="End call"
+              >
+                <PhoneOff size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── VIDEO CALL minimized ──────────────────────────────────
     return (
       <div className="fixed bottom-6 right-6 z-50 rounded-2xl overflow-hidden shadow-2xl w-48 h-32 bg-black border border-zinc-700 cursor-pointer" onClick={enableAudio}>
         {/* Remote video in background */}
