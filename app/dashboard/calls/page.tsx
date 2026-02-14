@@ -19,10 +19,13 @@ interface CallLog {
   status: "completed" | "missed" | "rejected";
 }
 
+const CALLS_PER_PAGE = 7;
+
 export default function CallsPage() {
   const { user } = useAuth();
   const [callLogs, setCallLogs] = useState<CallLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     // Fetch call logs from API
@@ -62,6 +65,12 @@ export default function CallsPage() {
     }
   };
 
+  const totalPages = Math.ceil(callLogs.length / CALLS_PER_PAGE);
+  const paginatedLogs = callLogs.slice(
+    (currentPage - 1) * CALLS_PER_PAGE,
+    currentPage * CALLS_PER_PAGE
+  );
+
   return (
     <div className="space-y-8">
       <header>
@@ -89,7 +98,7 @@ export default function CallsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {callLogs.map((log) => {
+          {paginatedLogs.map((log) => {
             const isOutgoing = log.type === "outgoing";
             const isMissed = log.status === "missed";
             const otherPerson = isOutgoing ? log.receiver : log.caller;
@@ -145,6 +154,41 @@ export default function CallsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 text-sm font-medium rounded-xl bg-zinc-900/60 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+          >
+            Previous
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`w-9 h-9 text-sm font-medium rounded-xl transition-all cursor-pointer ${
+                page === currentPage
+                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/30"
+                  : "bg-zinc-900/60 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 text-sm font-medium rounded-xl bg-zinc-900/60 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+          >
+            Next
+          </button>
         </div>
       )}
     </div>

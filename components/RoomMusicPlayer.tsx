@@ -791,7 +791,9 @@ export default function RoomMusicPlayer({ roomId, isOpen, onClose, onOpen }: Roo
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="flex-1 overflow-y-auto scrollbar-thin px-3 pb-3"
+                    className="flex-1 overflow-y-auto no-scrollbar px-3 pb-3"
+                    style={{ scrollbarWidth: "none", msOverflowStyle: "none", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
+                    onWheel={(e) => e.stopPropagation()}
                   >
                     {queue.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-zinc-600">

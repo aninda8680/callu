@@ -108,3 +108,12 @@ html.lenis, html.lenis body { height: auto; }
   animation: music-bar 0.8s ease-in-out infinite;
 }
 
+/* Hide scrollbar for webkit browsers (queue list, etc.) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
