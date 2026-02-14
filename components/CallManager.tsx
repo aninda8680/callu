@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSocket } from "@/context/SocketContext";
 import { useAuth } from "@/context/AuthContext";
 import { useCall } from "@/context/CallContext";
-import { Phone, PhoneOff, Mic, MicOff, Minimize2, Maximize2, Video, VideoOff, Volume2, ChevronDown, MonitorUp, MonitorOff, ArrowsUpFromLine } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Minimize2, Maximize2, Video, VideoOff, Volume2, ChevronDown, MonitorUp, MonitorOff, ArrowsUpFromLine, PictureInPicture2 } from "lucide-react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 // ICE server config shared by both caller and answerer
@@ -65,6 +65,7 @@ export default function CallManager() {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isSwapped, setIsSwapped] = useState(false);
   const [pipHovered, setPipHovered] = useState(false);
+  const [isInPiP, setIsInPiP] = useState(false);
 
   const myVideo = useRef<HTMLVideoElement>(null);
   const userVideo = useRef<HTMLVideoElement>(null);
@@ -326,6 +327,12 @@ export default function CallManager() {
     setIsSwapped(false);
     setPipHovered(false);
     setIsShareAudioActive(false);
+    setIsInPiP(false);
+
+    // Exit PiP if active
+    if (document.pictureInPictureElement) {
+      document.exitPictureInPicture().catch(() => {});
+    }
 
     // Cleanup screen share
     if (screenStreamRef.current) {
@@ -1001,6 +1008,41 @@ export default function CallManager() {
     console.log("🖥️ Screen sharing stopped");
   };
 
+  // ─── Picture-in-Picture ──────────────────────────────────────
+  const enterPiP = async () => {
+    const videoEl = userVideo.current;
+    if (!videoEl) return;
+    if (!document.pictureInPictureEnabled) return;
+    if (document.pictureInPictureElement) return; // already in PiP
+
+    try {
+      await videoEl.requestPictureInPicture();
+      setIsInPiP(true);
+      console.log("📺 Entered Picture-in-Picture");
+    } catch (err) {
+      console.log("PiP not available:", (err as Error).message);
+    }
+  };
+
+  const exitPiP = async () => {
+    if (!document.pictureInPictureElement) return;
+    try {
+      await document.exitPictureInPicture();
+      setIsInPiP(false);
+      console.log("📺 Exited Picture-in-Picture");
+    } catch (err) {
+      console.log("PiP exit failed:", (err as Error).message);
+    }
+  };
+
+  const togglePiP = async () => {
+    if (isInPiP) {
+      await exitPiP();
+    } else {
+      await enterPiP();
+    }
+  };
+
   const refreshDeviceLists = async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return;
     try {
@@ -1153,6 +1195,45 @@ export default function CallManager() {
           .catch(() => {});
       }
     }
+  });
+
+  // ─── Auto Picture-in-Picture on tab switch ───────────────────
+  useEffect(() => {
+    const isVideoCall = outgoingCallData?.callType === "video" || incomingCall?.callType === "video";
+    if (!callAccepted || !isVideoCall) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab hidden → enter PiP
+        void enterPiP();
+      } else {
+        // Tab visible → exit PiP  
+        void exitPiP();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callAccepted, outgoingCallData?.callType, incomingCall?.callType]);
+
+  // ─── PiP event listeners on remote video ─────────────────────
+  useEffect(() => {
+    const videoEl = userVideo.current;
+    if (!videoEl) return;
+
+    const onEnterPiP = () => setIsInPiP(true);
+    const onLeavePiP = () => setIsInPiP(false);
+
+    videoEl.addEventListener("enterpictureinpicture", onEnterPiP);
+    videoEl.addEventListener("leavepictureinpicture", onLeavePiP);
+
+    return () => {
+      videoEl.removeEventListener("enterpictureinpicture", onEnterPiP);
+      videoEl.removeEventListener("leavepictureinpicture", onLeavePiP);
+    };
   });
 
   // ─── RENDER ──────────────────────────────────────────────────
@@ -1564,6 +1645,19 @@ export default function CallManager() {
                         <Volume2 size={10} className="text-black" />
                       </span>
                     )}
+                  </button>
+                </div>
+
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    onClick={() => void togglePiP()}
+                    className={`p-3 rounded-full transition-all cursor-pointer ${
+                      isInPiP ? "bg-blue-500 text-white shadow-lg shadow-blue-500/50" : "bg-zinc-800/80 text-zinc-400 hover:bg-zinc-700"
+                    }`}
+                    aria-label="Toggle Picture-in-Picture"
+                    title="Picture-in-Picture"
+                  >
+                    <PictureInPicture2 size={20} />
                   </button>
                 </div>
 
