@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Shield, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Shield, CheckCircle2, Sparkles } from "lucide-react";
 
 export default function TermsModal() {
   const [accepted, setAccepted] = useState(false);
@@ -44,55 +45,136 @@ export default function TermsModal() {
   if (accepted) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-xl">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 w-full max-w-lg mx-4 shadow-2xl">
-        {/* Header */}
-        <div className="flex flex-col items-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
-            <Shield className="text-emerald-400" size={32} />
-          </div>
-          <h2 className="text-2xl font-light text-white tracking-tight">Community Guidelines</h2>
-          <p className="text-zinc-500 text-sm mt-1">Please review before continuing</p>
-        </div>
-
-        {/* Terms Content */}
-        <div className="bg-zinc-950/50 border border-zinc-800/50 rounded-2xl p-5 mb-6 max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700">
-          <div className="space-y-4 text-sm text-zinc-400 leading-relaxed">
-            <div className="flex gap-3">
-              <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-              <p><span className="text-white font-medium">Respect & Privacy</span> — Treat every member with respect. Do not record, screenshot, or share private conversations without explicit consent.</p>
-            </div>
-            <div className="flex gap-3">
-              <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-              <p><span className="text-white font-medium">No Harassment</span> — Harassment, hate speech, or discriminatory behavior of any kind will result in immediate removal from the community.</p>
-            </div>
-            <div className="flex gap-3">
-              <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-              <p><span className="text-white font-medium">Authentic Connections</span> — This is a space for genuine conversations. Spam, solicitation, or promotional content is not permitted.</p>
-            </div>
-            <div className="flex gap-3">
-              <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-              <p><span className="text-white font-medium">Audio & Microphone</span> — By agreeing, you allow CALLU to access your microphone during calls and enable audio notifications for incoming calls.</p>
-            </div>
-            <div className="flex gap-3">
-              <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-              <p><span className="text-white font-medium">Community Standards</span> — CALLU reserves the right to remove any member who violates these guidelines or disrupts the community experience.</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Agree Button */}
-        <button
-          onClick={handleAccept}
-          className="w-full bg-white text-black hover:bg-zinc-200 py-4 rounded-2xl font-medium text-base tracking-wide transition-all active:scale-[0.98] cursor-pointer shadow-lg shadow-white/5"
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl"
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ type: "spring", duration: 0.6, bounce: 0.3 }}
+          className="bg-zinc-900 border border-zinc-800/50 rounded-3xl p-8 w-full max-w-2xl mx-4 shadow-2xl relative overflow-hidden"
         >
-          I Agree — Enter Community
-        </button>
+          {/* Decorative gradient blobs */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-72 h-72 bg-blue-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
 
-        <p className="text-center text-zinc-600 text-xs mt-4">
-          By clicking above, you agree to our community guidelines and terms of service.
-        </p>
-      </div>
-    </div>
+          {/* Content */}
+          <div className="relative z-10">
+            {/* Header */}
+            <div className="flex flex-col items-center mb-8">
+              <motion.div
+                initial={{ scale: 0, rotate: -45 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/30 flex items-center justify-center mb-5 relative"
+              >
+                <Shield className="text-emerald-400 w-10 h-10" strokeWidth={1.5} />
+                <div className="absolute -top-1 -right-1">
+                  <Sparkles className="w-5 h-5 text-emerald-400 animate-pulse" />
+                </div>
+              </motion.div>
+              
+              <motion.h2
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-3xl font-bold text-white tracking-tight"
+              >
+                Community Guidelines
+              </motion.h2>
+              
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="text-zinc-400 text-sm mt-2"
+              >
+                Please review before continuing
+              </motion.p>
+            </div>
+
+            {/* Terms Content */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-zinc-950/50 border border-zinc-800/50 rounded-2xl p-6 mb-6 max-h-[350px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
+            >
+              <div className="space-y-5">
+                {[
+                  {
+                    title: "Respect & Privacy",
+                    description: "Treat every member with respect. Do not record, screenshot, or share private conversations without explicit consent.",
+                  },
+                  {
+                    title: "No Harassment",
+                    description: "Harassment, hate speech, or discriminatory behavior of any kind will result in immediate removal from the community.",
+                  },
+                  {
+                    title: "Authentic Connections",
+                    description: "This is a space for genuine conversations. Spam, solicitation, or promotional content is not permitted.",
+                  },
+                  {
+                    title: "Audio & Microphone",
+                    description: "By agreeing, you allow CALLU to access your microphone during calls and enable audio notifications for incoming calls.",
+                  },
+                  {
+                    title: "Community Standards",
+                    description: "CALLU reserves the right to remove any member who violates these guidelines or disrupts the community experience.",
+                  },
+                ].map((item, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.6 + index * 0.1 }}
+                    className="flex gap-4 group"
+                  >
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                        <CheckCircle2 className="text-emerald-400 w-4 h-4" strokeWidth={2} />
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold text-sm mb-1">{item.title}</h3>
+                      <p className="text-zinc-400 text-sm leading-relaxed">{item.description}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Agree Button */}
+            <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.1 }}
+              onClick={handleAccept}
+              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white py-4 rounded-xl font-semibold text-base tracking-wide transition-all active:scale-[0.98] cursor-pointer shadow-lg shadow-emerald-900/30 hover:shadow-emerald-900/50 relative overflow-hidden group"
+            >
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                <Shield className="w-5 h-5" />
+                I Agree — Enter Community
+              </span>
+              <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
+            </motion.button>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.2 }}
+              className="text-center text-zinc-500 text-xs mt-5 leading-relaxed"
+            >
+              By clicking above, you agree to our community guidelines and terms of service.
+            </motion.p>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
