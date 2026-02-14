@@ -785,7 +785,7 @@ export function DashboardSidebar() {
                 </div>
               )}
             </div>
-            <div className={cn("flex items-center gap-1", isCollapsed ? "flex-col" : "")}>
+            <div className={cn("flex items-center justify-center gap-1", isCollapsed ? "flex-col" : "")}>
               <button
                 onClick={(e) => { e.stopPropagation(); toggleMute(); }}
                 className={cn(
