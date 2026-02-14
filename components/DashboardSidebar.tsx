@@ -403,12 +403,15 @@ export function DashboardSidebar() {
                                           ) : (
                                             <Volume2 className="w-3.5 h-3.5 flex-shrink-0 text-zinc-600" />
                                           )}
-                                          <span className={cn(
-                                            "truncate font-medium text-xs transition-colors flex-1",
+                                          <div className={cn(
+                                            "flex-1 overflow-hidden relative text-xs font-medium transition-colors",
                                             isRoomActive(room._id) ? "text-white" : isLive ? "text-zinc-200" : "text-zinc-500 group-hover:text-zinc-300"
                                           )}>
-                                            {room.name}
-                                          </span>
+                                            <div className="room-name-scroll whitespace-nowrap">
+                                              <span className="inline-block">{room.name}</span>
+                                              <span className="inline-block ml-4">{room.name}</span>
+                                            </div>
+                                          </div>
                                           {!isLive && (
                                             <span className="text-[10px] text-zinc-600 font-medium">0/{room.maxParticipants}</span>
                                           )}
@@ -775,6 +778,27 @@ export function DashboardSidebar() {
           </div>
         </>
       )}
+
+      {/* CSS for room name scrolling */}
+      <style jsx>{`
+        .room-name-scroll {
+          display: inline-flex;
+          animation: scroll-text 12s linear infinite;
+        }
+        
+        .group:not(:hover) .room-name-scroll {
+          animation: none;
+        }
+        
+        @keyframes scroll-text {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+      `}</style>
     </motion.aside>
   );
 }
