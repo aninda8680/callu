@@ -3,6 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { SocketProvider } from "@/context/SocketContext";
 import { CallProvider } from "@/context/CallContext";
+import { RoomVoiceProvider } from "@/context/RoomVoiceContext";
 import CallManager from "@/components/CallManager";
 import TermsModal from "@/components/TermsModal";
 import CustomContextMenu from "@/components/CustomContextMenu";
@@ -35,29 +36,31 @@ export default function DashboardLayout({
   return (
     <SocketProvider>
       <CallProvider>
-        <div className="min-h-screen bg-black text-white flex">
-           <DashboardSidebar />
-           
-           <main className="flex-1 p-8 overflow-y-auto">
-             {children}
-           </main>
+        <RoomVoiceProvider>
+          <div className="min-h-screen bg-black text-white flex">
+             <DashboardSidebar />
+             
+             <main className="flex-1 p-8 overflow-y-auto">
+               {children}
+             </main>
 
-           <CallManager />
-           <TermsModal />
-           <CustomContextMenu />
-           <Toaster 
-             position="top-center" 
-             theme="dark"
-             toastOptions={{
-               style: {
-                 background: '#18181b',
-                 border: '1px solid #27272a',
-                 color: '#fff',
-               },
-               className: 'font-dm',
-             }}
-           />
-        </div>
+             <CallManager />
+             <TermsModal />
+             <CustomContextMenu />
+             <Toaster 
+               position="top-center" 
+               theme="dark"
+               toastOptions={{
+                 style: {
+                   background: '#18181b',
+                   border: '1px solid #27272a',
+                   color: '#fff',
+                 },
+                 className: 'font-dm',
+               }}
+             />
+          </div>
+        </RoomVoiceProvider>
       </CallProvider>
     </SocketProvider>
   );

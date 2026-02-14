@@ -18,10 +18,11 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import { useCall } from "@/context/CallContext";
+import { useRoomVoice } from "@/context/RoomVoiceContext";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
-import { PhoneOff, DoorOpen } from "lucide-react";
+import { PhoneOff, DoorOpen, Mic, MicOff, VolumeX, Headphones } from "lucide-react";
 import { toast } from "sonner";
 
 interface Room {
@@ -67,6 +68,7 @@ export function DashboardSidebar() {
   const { user, logout } = useAuth();
   const { socket } = useSocket();
   const { isInCall, isInRoom, currentRoomId, currentRoomName } = useCall();
+  const { isVoiceConnected, voiceRoomId, voiceRoomName, isMuted, isDeafened, toggleMute, toggleDeafen, leaveVoice } = useRoomVoice();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -718,6 +720,66 @@ export function DashboardSidebar() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ─── Voice Connected Bar ─── */}
+      {isVoiceConnected && voiceRoomId && (
+        <div className={cn("border-t border-zinc-900", isCollapsed ? "p-2" : "px-4 py-3")}>
+          <div
+            onClick={() => {
+              sessionStorage.setItem('room-join-intent', 'true');
+              router.push(`/dashboard/rooms/${voiceRoomId}`);
+            }}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/5 border border-emerald-500/20 cursor-pointer hover:bg-emerald-500/10 transition-all group mb-2"
+          >
+            <div className="relative flex-shrink-0">
+              <Volume2 className="w-4 h-4 text-emerald-500" />
+              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            </div>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold text-emerald-500 uppercase tracking-wider">Voice Connected</p>
+                <p className="text-xs text-zinc-400 truncate">{voiceRoomName || 'Room'}</p>
+              </div>
+            )}
+          </div>
+          <div className={cn("flex items-center gap-1", isCollapsed ? "flex-col" : "")}>
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+              className={cn(
+                "p-1.5 rounded-lg transition-all cursor-pointer",
+                isMuted
+                  ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                  : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+              )}
+              title={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleDeafen(); }}
+              className={cn(
+                "p-1.5 rounded-lg transition-all cursor-pointer",
+                isDeafened
+                  ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                  : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+              )}
+              title={isDeafened ? 'Undeafen' : 'Deafen'}
+            >
+              {isDeafened ? <VolumeX className="w-3.5 h-3.5" /> : <Headphones className="w-3.5 h-3.5" />}
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                leaveVoice();
+              }}
+              className="p-1.5 rounded-lg bg-red-600/10 text-red-400 hover:bg-red-600/20 transition-all cursor-pointer"
+              title="Disconnect"
+            >
+              <PhoneOff className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className={cn("border-t border-zinc-900 mt-auto", isCollapsed ? "p-4" : "p-6")}>
         {user && (
