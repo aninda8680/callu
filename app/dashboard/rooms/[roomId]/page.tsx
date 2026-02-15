@@ -639,6 +639,7 @@ export default function RoomVoiceChatPage() {
 
   const leaveRoom = () => {
     leaveVoice();
+    disconnectMusic();
     router.push("/dashboard/members");
   };
 
