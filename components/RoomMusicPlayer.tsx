@@ -92,8 +92,8 @@ export default function RoomMusicPlayer({ roomId, isOpen, onClose, onOpen }: Roo
 
   // ─── YouTube opts ────────────────────────────────────────────
   const playerOpts: YouTubeProps["opts"] = {
-    height: "0",
-    width: "0",
+    height: "1",
+    width: "1",
     playerVars: {
       autoplay: 1,
       controls: 0,
@@ -411,6 +411,17 @@ export default function RoomMusicPlayer({ roomId, isOpen, onClose, onOpen }: Roo
   const onPlayerReady = (event: YouTubeEvent) => {
     playerRef.current = event.target;
     event.target.setVolume(volume);
+    // Try to get video title from the player API as a fallback
+    try {
+      const videoData = event.target.getVideoData?.();
+      if (videoData?.title) {
+        setQueue(prev => prev.map((s, i) =>
+          i === currentIndexRef.current && (!s.title || s.title.startsWith("YouTube Video"))
+            ? { ...s, title: videoData.title }
+            : s
+        ));
+      }
+    } catch {}
     if (isPlayingRef.current) {
       event.target.playVideo();
       startTimeTracker();
@@ -447,8 +458,18 @@ export default function RoomMusicPlayer({ roomId, isOpen, onClose, onOpen }: Roo
     }
   };
 
-  const onPlayerError = () => {
-    toast.error("Failed to play video. Skipping...");
+  const onPlayerError = (event: YouTubeEvent) => {
+    const errorCode = event.data;
+    const errorMessages: Record<number, string> = {
+      2: "Invalid video ID",
+      5: "Video cannot be played in embedded player",
+      100: "Video not found or removed",
+      101: "Embedding not allowed by owner",
+      150: "Embedding not allowed by owner",
+    };
+    const msg = errorMessages[errorCode] || `Player error (code: ${errorCode})`;
+    console.error(`YouTube player error: ${msg}`, errorCode);
+    toast.error(`${msg}. Skipping...`);
     const curIdx = currentIndexRef.current;
     if (curIdx + 1 < queueRef.current.length) {
       socket?.emit("music-skip", { roomId });
@@ -497,7 +518,7 @@ export default function RoomMusicPlayer({ roomId, isOpen, onClose, onOpen }: Roo
   return (
     <>
       {/* Hidden YouTube Player – ALWAYS mounted when a song is loaded */}
-      <div className="fixed w-0 h-0 overflow-hidden pointer-events-none" style={{ top: -9999, left: -9999 }} aria-hidden="true">
+      <div className="fixed overflow-hidden pointer-events-none" style={{ top: -9999, left: -9999, width: 1, height: 1, opacity: 0 }} aria-hidden="true">
         {currentSong && (
           <YouTube
             key={`yt-${currentSong.videoId}-${currentIndex}`}
