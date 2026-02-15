@@ -17,20 +17,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Email is required" }, { status: 400 });
     }
 
+    if (!email.includes("@") || !email.includes(".")) {
+      return NextResponse.json({ message: "Invalid email format" }, { status: 400 });
+    }
+
     await dbConnect();
     const user = await User.findOne({ email });
 
     if (!user) {
+      console.warn(`[OTP] User not found for email: ${email}`);
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
     if (user.status !== "approved") {
+      console.warn(`[OTP] User not approved: ${email}, status: ${user.status}`);
       return NextResponse.json({ message: "Your application is still pending review." }, { status: 403 });
     }
 
     const code = makeCode();
     const codeHash = hashValue(code);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    console.log(`[OTP] Generating OTP for ${email}, code: ${code}`);
 
     await LoginOtp.findOneAndUpdate(
       { email },
@@ -53,11 +61,48 @@ export async function POST(req: Request) {
       </div>
     `;
 
-    await sendNotifyMail({ to: email, subject, text, html });
+    try {
+      console.log(`[OTP] Attempting to send email to ${email} via Resend...`);
+      await sendNotifyMail({ to: email, subject, text, html });
+      console.log(`[OTP] Email sent successfully to ${email}`);
+      return NextResponse.json({ message: "Verification code sent" }, { status: 200 });
+    } catch (emailError: any) {
+      const errorMsg = emailError?.message || emailError?.toString() || "Unknown email error";
+      console.error(`[OTP] Email delivery failed for ${email}:`, {
+        error: errorMsg,
+        status: emailError?.status,
+        stack: emailError?.stack,
+      });
+      
+      // More detailed sandbox/config error messages
+      if (
+        errorMsg.includes("not verified") ||
+        errorMsg.includes("sandboxed") ||
+        errorMsg.includes("not in your list of verified") ||
+        errorMsg.includes("Invalid or missing") ||
+        errorMsg.includes("Resend error")
+      ) {
+        return NextResponse.json(
+          { 
+            message: "Email service temporarily unavailable. Please try again in a moment.",
+            code: "EMAIL_SERVICE_ERROR"
+          },
+          { status: 503 }
+        );
+      }
 
-    return NextResponse.json({ message: "Verification code sent" }, { status: 200 });
+      throw emailError;
+    }
   } catch (error: any) {
-    console.error("OTP send error:", error);
-    return NextResponse.json({ message: error?.message || "Failed to send code" }, { status: 500 });
+    const errorMsg = error?.message || error?.toString() || "Failed to send code";
+    console.error("[OTP] Fatal error:", errorMsg, error);
+    
+    return NextResponse.json(
+      { 
+        message: errorMsg,
+        debug: process.env.NODE_ENV === "development" ? error?.stack : undefined
+      },
+      { status: 500 }
+    );
   }
 }
