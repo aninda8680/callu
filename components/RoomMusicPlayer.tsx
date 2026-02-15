@@ -413,7 +413,7 @@ export default function RoomMusicPlayer({ roomId, isOpen, onClose, onOpen }: Roo
     event.target.setVolume(volume);
     // Try to get video title from the player API as a fallback
     try {
-      const videoData = event.target.getVideoData?.();
+      const videoData = (event.target as any).getVideoData?.();
       if (videoData?.title) {
         setQueue(prev => prev.map((s, i) =>
           i === currentIndexRef.current && (!s.title || s.title.startsWith("YouTube Video"))
