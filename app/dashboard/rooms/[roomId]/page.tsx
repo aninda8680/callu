@@ -7,7 +7,7 @@ import { useRouter, useParams } from "next/navigation";
 import {
   Volume2, VolumeX, PhoneOff, Mic, MicOff,
   Video, VideoOff, MonitorUp, MonitorOff,
-  PictureInPicture2, LayoutGrid,
+  PictureInPicture2, LayoutGrid, Maximize2, Minimize2,
   Wrench, Music, MessageSquare, X, Paperclip, Send, File as FileIcon, Smile, ChevronDown,
   Play, Pause, Link2,
 } from "lucide-react";
@@ -113,6 +113,7 @@ export default function RoomVoiceChatPage() {
   const [isWatchSynced, setIsWatchSynced] = useState(false);
   const [activeWatch, setActiveWatch] = useState<{ roomId: string; videoId: string; startedBy: string } | null>(null);
   const [showWatchJoinNotification, setShowWatchJoinNotification] = useState(false);
+  const [isScreenShareFullscreen, setIsScreenShareFullscreen] = useState(false);
 
   const chatListRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -125,6 +126,8 @@ export default function RoomVoiceChatPage() {
   const watchVideoTypeRef = useRef<string | null>(null);
   const watchTimeTrackerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const watchIsSeeking = useRef(false);
+  const spotlightVideoRef = useRef<HTMLVideoElement | null>(null);
+  const spotlightContainerRef = useRef<HTMLDivElement | null>(null);
 
   // ─── Local refs (video-only, page-scoped) ───────────────────────
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -144,13 +147,30 @@ export default function RoomVoiceChatPage() {
   useEffect(() => { isVideoOnRef.current = isVideoOn; }, [isVideoOn]);
   useEffect(() => { isScreenSharingRef.current = isScreenSharing; }, [isScreenSharing]);
 
-  // ──── Cleanup on unmount ─────────────────────────────────────────
+  // ─── Cleanup on unmount ─────────────────────────────────────────
   useEffect(() => {
     return () => {
       if (watchTimeTrackerRef.current) {
         clearInterval(watchTimeTrackerRef.current);
         watchTimeTrackerRef.current = null;
       }
+      if (isScreenShareFullscreen && document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, []);
+
+  // ─── Listen for fullscreen changes ───────────────────────────────
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setIsScreenShareFullscreen(false);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, []);
 
@@ -1103,6 +1123,28 @@ export default function RoomVoiceChatPage() {
     router.push("/dashboard/members");
   };
 
+  const toggleScreenShareFullscreen = async () => {
+    const container = spotlightContainerRef.current;
+    if (!container) return;
+
+    if (isScreenShareFullscreen) {
+      // Exit fullscreen
+      if (document.fullscreenElement) {
+        await document.exitFullscreen().catch(() => {});
+      }
+      setIsScreenShareFullscreen(false);
+    } else {
+      // Enter fullscreen
+      try {
+        await container.requestFullscreen({ navigationUI: "hide" });
+        setIsScreenShareFullscreen(true);
+      } catch (err) {
+        console.error("Fullscreen request failed:", err);
+        toast.error("Could not enter fullscreen mode");
+      }
+    }
+  };
+
   // ═══════════════════════════════════════════════════════════════════
   //  Loading / not-found guards
   // ═══════════════════════════════════════════════════════════════════
@@ -1186,7 +1228,12 @@ export default function RoomVoiceChatPage() {
         {layout === "spotlight" ? (
           <div className="flex-1 flex flex-col pb-24 gap-4">
             {/* Main spotlight area */}
-            <div className="flex-1 relative rounded-3xl overflow-hidden bg-zinc-900/40 border border-zinc-800/50 min-h-[300px]">
+            <div
+              ref={spotlightContainerRef}
+              className={`flex-1 relative rounded-3xl overflow-hidden bg-zinc-900/40 border border-zinc-800/50 min-h-[300px] transition-all ${
+                isScreenShareFullscreen ? "fixed inset-0 rounded-none z-[100]" : ""
+              }`}
+            >
               {(() => {
                 const currentSpotlightId =
                   spotlightUserId ||
@@ -1201,20 +1248,26 @@ export default function RoomVoiceChatPage() {
                     {sp.isVideoOn ? (
                       isLocal ? (
                         <video
-                          ref={attachLocalVideoRef}
+                          ref={(el) => {
+                            attachLocalVideoRef(el);
+                            spotlightVideoRef.current = el;
+                          }}
                           autoPlay
                           playsInline
                           muted
-                          className={`absolute inset-0 w-full h-full bg-black ${isSharing ? "object-contain" : "object-cover"}`}
+                          className={`absolute inset-0 w-full h-full bg-black object-cover`}
                           style={!isScreenSharing ? { transform: "scaleX(-1)" } : undefined}
                         />
                       ) : (
                         <video
-                          ref={(el) => attachVideoRef(sp.userId, el)}
+                          ref={(el) => {
+                            attachVideoRef(sp.userId, el);
+                            spotlightVideoRef.current = el;
+                          }}
                           autoPlay
                           playsInline
                           muted
-                          className={`absolute inset-0 w-full h-full bg-black ${isSharing ? "object-contain" : "object-cover"}`}
+                          className={`absolute inset-0 w-full h-full bg-black object-cover`}
                         />
                       )
                     ) : (
@@ -1233,30 +1286,45 @@ export default function RoomVoiceChatPage() {
                     )}
                     {/* Overlay info */}
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 z-20">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-white font-medium">{sp.name}</h3>
-                        {sp.userId === user?._id && (
-                          <span className="text-[10px] text-zinc-400 bg-zinc-800/80 px-1.5 py-0.5 rounded uppercase">You</span>
-                        )}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 flex-1">
+                          <h3 className="text-white font-medium">{sp.name}</h3>
+                          {sp.userId === user?._id && (
+                            <span className="text-[10px] text-zinc-400 bg-zinc-800/80 px-1.5 py-0.5 rounded uppercase">You</span>
+                          )}
+                          {sp.isScreenSharing && (
+                            <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                              <MonitorUp className="w-3 h-3" /> Sharing
+                            </span>
+                          )}
+                          {sp.isSpeaking && (
+                            <div className="flex items-center gap-0.5 ml-1">
+                              {[0, 0.1, 0.2].map((d, i) => (
+                                <span
+                                  key={i}
+                                  className="w-0.5 bg-emerald-400 rounded-full"
+                                  style={{
+                                    height: i === 1 ? "6px" : "4px",
+                                    animation: "soundwave 0.6s ease-in-out infinite",
+                                    animationDelay: `${d}s`,
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         {sp.isScreenSharing && (
-                          <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                            <MonitorUp className="w-3 h-3" /> Sharing
-                          </span>
-                        )}
-                        {sp.isSpeaking && (
-                          <div className="flex items-center gap-0.5 ml-1">
-                            {[0, 0.1, 0.2].map((d, i) => (
-                              <span
-                                key={i}
-                                className="w-0.5 bg-emerald-400 rounded-full"
-                                style={{
-                                  height: i === 1 ? "6px" : "4px",
-                                  animation: "soundwave 0.6s ease-in-out infinite",
-                                  animationDelay: `${d}s`,
-                                }}
-                              />
-                            ))}
-                          </div>
+                          <button
+                            onClick={toggleScreenShareFullscreen}
+                            className="ml-2 p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition"
+                            title={isScreenShareFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                          >
+                            {isScreenShareFullscreen ? (
+                              <Minimize2 className="w-4 h-4" />
+                            ) : (
+                              <Maximize2 className="w-4 h-4" />
+                            )}
+                          </button>
                         )}
                       </div>
                     </div>
