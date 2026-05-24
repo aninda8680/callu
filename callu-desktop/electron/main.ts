@@ -75,9 +75,17 @@ function createMainWindow() {
 
   if (isDev) {
     mainWindow.loadURL("http://localhost:5173");
+    mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
   }
+
+  // Forward renderer console logs to the terminal
+  mainWindow.webContents.on("console-message", (event, level, message, line, sourceId) => {
+    const levels = ["DEBUG", "INFO", "WARN", "ERROR"];
+    const lvlName = levels[level] || `LEVEL-${level}`;
+    console.log(`[Renderer Console] [${lvlName}] ${message} (at ${path.basename(sourceId)}:${line})`);
+  });
 
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show();
@@ -177,7 +185,16 @@ function setupAutoUpdater() {
 
   autoUpdater.autoDownload = false;
 
+  autoUpdater.on("checking-for-update", () => {
+    console.log("[AutoUpdater] Checking for update...");
+  });
+
+  autoUpdater.on("update-not-available", (info) => {
+    console.log(`[AutoUpdater] Update not available. Current version: ${app.getVersion()}`);
+  });
+
   autoUpdater.on("update-available", (info) => {
+    console.log(`[AutoUpdater] Update available! New version: ${info.version}`);
     dialog.showMessageBox({
       type: "info",
       title: "Update Available",
@@ -187,12 +204,18 @@ function setupAutoUpdater() {
       cancelId: 1
     }).then((result) => {
       if (result.response === 0) {
+        console.log("[AutoUpdater] Starting update download...");
         autoUpdater.downloadUpdate();
       }
     });
   });
 
+  autoUpdater.on("download-progress", (progressObj) => {
+    console.log(`[AutoUpdater] Downloading... ${progressObj.percent.toFixed(2)}% (${(progressObj.bytesPerSecond / 1024).toFixed(2)} KB/s)`);
+  });
+
   autoUpdater.on("update-downloaded", () => {
+    console.log("[AutoUpdater] Update downloaded successfully!");
     dialog.showMessageBox({
       type: "info",
       title: "Update Ready",
@@ -219,6 +242,17 @@ function setupAutoUpdater() {
 }
 
 app.on("ready", () => {
+  // Grant microphone, camera, and display-capture permissions automatically
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    const allowed = ["media", "audioCapture", "videoCapture", "notifications", "display-capture"];
+    callback(allowed.includes(permission));
+  });
+
+  session.defaultSession.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
+    const allowed = ["media", "audioCapture", "videoCapture", "notifications", "display-capture"];
+    return allowed.includes(permission);
+  });
+
   // Redirect absolute local requests (like file:///avatars/...) to files inside the dist directory
   const distPath = path.join(__dirname, "../../dist");
   session.defaultSession.webRequest.onBeforeRequest(

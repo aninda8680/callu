@@ -60,11 +60,7 @@ async function bootstrap() {
     let url = typeof input === "string" ? input : (input instanceof URL ? input.href : (input as Request).url);
     const baseUrl = import.meta.env.VITE_API_URL || "https://callu-production.up.railway.app";
 
-    if (url.startsWith("/api/")) {
-      url = `${baseUrl}${url}`;
-    } else if (url.startsWith("file:///api/")) {
-      url = `${baseUrl}${url.substring(7)}`;
-    } else if (url.startsWith("file://") && url.includes("/api/")) {
+    if (url.includes("/api/") && !url.startsWith(baseUrl)) {
       const apiIndex = url.indexOf("/api/");
       url = `${baseUrl}${url.substring(apiIndex)}`;
     }

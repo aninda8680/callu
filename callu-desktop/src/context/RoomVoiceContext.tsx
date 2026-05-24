@@ -861,10 +861,21 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
   // ═══════════════════════════════════════════════════════════════
 
   const joinVoice = async (roomId: string, roomName: string): Promise<boolean> => {
-    if (isVoiceConnectedRef.current) return false;
+    console.log("[RoomVoiceContext] joinVoice called for room:", roomId, roomName);
+    console.log("[RoomVoiceContext] isVoiceConnectedRef:", isVoiceConnectedRef.current);
+    console.log("[RoomVoiceContext] socket:", socketRef.current ? "present (id: " + socketRef.current.id + ")" : "NULL");
+    console.log("[RoomVoiceContext] user:", userRef.current);
+
+    if (isVoiceConnectedRef.current) {
+      console.warn("[RoomVoiceContext] Already connected to voice.");
+      return false;
+    }
     const s = socketRef.current;
     const u = userRef.current;
-    if (!s || !u) return false;
+    if (!s || !u) {
+      console.error("[RoomVoiceContext] Cannot join voice: socket or user is null!", { socket: !!s, user: !!u });
+      return false;
+    }
 
     // Join room in DB
     try {
