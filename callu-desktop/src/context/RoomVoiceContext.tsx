@@ -1114,6 +1114,16 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
       currentStream.getAudioTracks().forEach((track) => {
         track.enabled = !newMuted;
       });
+
+      // Direct WebRTC sender track override to ensure flawless transmission
+      peerConnectionsRef.current.forEach((pc) => {
+        pc.getSenders().forEach((sender) => {
+          if (sender.track && sender.track.kind === "audio") {
+            sender.track.enabled = !newMuted;
+          }
+        });
+      });
+
       setIsMuted(newMuted);
 
       // Broadcast mute state to other participants
@@ -1150,11 +1160,21 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
     const setMuteState = (muted: boolean) => {
       const stream = localStreamRef.current;
       if (!stream) return;
-      if (isMutedRef.current === muted) return; // already in desired state
 
+      // Force toggle on local stream tracks
       stream.getAudioTracks().forEach((track) => {
         track.enabled = !muted;
       });
+
+      // Force direct WebRTC sender track override to guarantee flawless transmission
+      peerConnectionsRef.current.forEach((pc) => {
+        pc.getSenders().forEach((sender) => {
+          if (sender.track && sender.track.kind === "audio") {
+            sender.track.enabled = !muted;
+          }
+        });
+      });
+
       setIsMuted(muted);
 
       const s = socketRef.current;
@@ -1169,6 +1189,7 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
     };
 
     const handleKeyDown = (data: { keycode: number }) => {
+      console.log("[PTT] keydown received:", data.keycode, "| pttKeycodeRef:", pttKeycodeRef.current, "| isPTTEnabled:", isPTTEnabledRef.current, "| isKeyDown:", isKeyDown, "| isRecording:", isRecordingKeybindRef.current, "| stream:", !!localStreamRef.current);
       // If we are recording a custom keybind, capture this keypress
       if (isRecordingKeybindRef.current) {
         setPttKeycode(data.keycode);
@@ -1181,6 +1202,7 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
         if (!isKeyDown) {
           isKeyDown = true;
           setIsPTTActive(true);
+          console.log("[PTT] >>> UNMUTING via setMuteState(false)");
           setMuteState(false); // unmute while key is held
         }
       }

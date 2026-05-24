@@ -1562,7 +1562,10 @@ export default function RoomVoiceChatPage() {
             {/* Mic */}
             <div className="relative flex items-center">
               <button
-                onClick={toggleMute}
+                onClick={(e) => {
+                  e.currentTarget.blur();
+                  toggleMute();
+                }}
                 className={`p-3 md:p-3.5 rounded-xl transition-all duration-200 group relative cursor-pointer ${
                   isMuted
                     ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
@@ -1575,7 +1578,8 @@ export default function RoomVoiceChatPage() {
                 </span>
               </button>
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.currentTarget.blur();
                   setShowMicMenu((prev) => !prev);
                   setShowSpeakerMenu(false);
                 }}
@@ -1594,7 +1598,11 @@ export default function RoomVoiceChatPage() {
                       availableMics.map((mic, index) => (
                         <button
                           key={mic.deviceId}
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.currentTarget.blur();
+                            if (typeof document !== "undefined") {
+                              (document.activeElement as HTMLElement)?.blur();
+                            }
                             void switchMicDevice(mic.deviceId);
                             setShowMicMenu(false);
                           }}
@@ -1612,7 +1620,13 @@ export default function RoomVoiceChatPage() {
                   {/* PTT Toggle */}
                   <div className="border-t border-zinc-800/60 mt-1 pt-1">
                     <button
-                      onClick={() => setIsPTTEnabled(!isPTTEnabled)}
+                      onClick={(e) => {
+                        e.currentTarget.blur();
+                        if (typeof document !== "undefined") {
+                          (document.activeElement as HTMLElement)?.blur();
+                        }
+                        setIsPTTEnabled(!isPTTEnabled);
+                      }}
                       className={`w-full flex items-center justify-between px-2 py-2 rounded-lg text-xs transition cursor-pointer ${
                         isPTTEnabled
                           ? "bg-emerald-500/10 text-emerald-300"

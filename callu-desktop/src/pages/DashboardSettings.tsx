@@ -604,7 +604,13 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setIsRecordingKeybind(true)}
+                  onClick={(e) => {
+                    e.currentTarget.blur();
+                    if (typeof document !== "undefined") {
+                      (document.activeElement as HTMLElement)?.blur();
+                    }
+                    setIsRecordingKeybind(true);
+                  }}
                   disabled={isRecordingKeybind}
                   className={`relative px-4 py-2 bg-zinc-900 border text-xs font-semibold font-mono rounded-lg transition-all shadow-inner cursor-pointer active:scale-95 select-none ${
                     isRecordingKeybind 
