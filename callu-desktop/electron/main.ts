@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, safeStorage, session, dialog } from "electron";
+import { app, BrowserWindow, ipcMain, screen, safeStorage, session, dialog, net } from "electron";
 import * as path from "path";
 import * as fs from "fs";
 import { pathToFileURL } from "url";
@@ -54,6 +54,46 @@ app.commandLine.appendSwitch("disable-features", "WebRtcHideLocalIpsWithMdns");
 app.commandLine.appendSwitch("force-fieldtrials", "WebRTC-VP9-Dependency-Descriptor/Enabled/");
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
+
+const getStoredSessionToken = (): string | null => {
+  const value = store.get("session") as string | null;
+  if (!value) return null;
+  if (!safeStorage.isEncryptionAvailable()) {
+    return value;
+  }
+  try {
+    const encryptedBuffer = Buffer.from(value, "hex");
+    return safeStorage.decryptString(encryptedBuffer);
+  } catch (e) {
+    console.error("Failed to decrypt startup session:", e);
+    return null;
+  }
+};
+
+async function fetchAndApplyGithubToken(sessionToken: string | null) {
+  if (!sessionToken) return;
+  try {
+    const backendUrl = process.env.VITE_API_URL || "https://callu-production.up.railway.app";
+    const response = await net.fetch(`${backendUrl}/api/auth/github-token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ token: sessionToken })
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.ghToken) {
+        autoUpdater.requestHeaders = {
+          Authorization: `token ${data.ghToken}`
+        };
+        console.log("[AutoUpdater] Configured authorization headers using token fetched from website backend");
+      }
+    }
+  } catch (err) {
+    console.error("Failed to fetch GitHub token from backend:", err);
+  }
+}
 
 function createRingtoneWindow() {
   ringtoneWindow = new BrowserWindow({
@@ -201,7 +241,7 @@ function createMainWindow() {
   });
 
   // Manual Check for Updates handlers
-  ipcMain.on("check-for-updates", () => {
+  ipcMain.on("check-for-updates", async (event, args) => {
     if (isDev) {
       mainWindow?.webContents.send("update-status", {
         status: "not-available",
@@ -209,10 +249,20 @@ function createMainWindow() {
       });
       return;
     }
+
+    const sessionToken = args?.token;
+    if (sessionToken) {
+      await fetchAndApplyGithubToken(sessionToken);
+    }
+
     autoUpdater.checkForUpdates().catch((err) => {
+      let errMsg = err.message || "Failed to check for updates.";
+      if (errMsg.includes("404") && errMsg.includes("releases.atom")) {
+        errMsg = "Update check failed (404). Please ensure the repository is public and has at least one published release on GitHub.";
+      }
       mainWindow?.webContents.send("update-status", {
         status: "error",
-        message: err.message || "Failed to check for updates."
+        message: errMsg
       });
     });
   });
@@ -241,7 +291,7 @@ function createMainWindow() {
   });
 }
 
-function setupAutoUpdater() {
+async function setupAutoUpdater() {
   if (isDev) {
     console.log("[AutoUpdater] Disabled in development mode");
     return;
@@ -255,6 +305,12 @@ function setupAutoUpdater() {
       Authorization: `token ${token}`
     };
     console.log("[AutoUpdater] Configured authorization headers using GH_TOKEN");
+  } else {
+    // Attempt to fetch from website deployment backend using stored session token
+    const storedSession = getStoredSessionToken();
+    if (storedSession) {
+      await fetchAndApplyGithubToken(storedSession);
+    }
   }
 
   autoUpdater.on("checking-for-update", () => {

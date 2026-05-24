@@ -78,7 +78,8 @@ export default function SettingsPage() {
   const handleCheckForUpdates = () => {
     if (window.electron) {
       setUpdateStatus({ status: "checking", message: "Checking for updates..." });
-      window.electron.send("check-for-updates");
+      const token = localStorage.getItem("callu_session");
+      window.electron.send("check-for-updates", { token });
     } else {
       toast.error("Updates are only checkable in desktop app.");
     }
