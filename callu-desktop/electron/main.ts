@@ -1,11 +1,41 @@
 import { app, BrowserWindow, ipcMain, screen, safeStorage, session, dialog } from "electron";
 import * as path from "path";
+import * as fs from "fs";
 import { pathToFileURL } from "url";
 import { autoUpdater } from "electron-updater";
 import Store from "electron-store";
 import { createTray, setTrayStatus } from "./tray";
 import { setupMediaIPC } from "./ipc/media.ipc";
 import { setupPTTIPC } from "./ipc/ptt.ipc";
+
+// Function to parse .env file content
+function loadEnvFile(filePath: string) {
+  try {
+    if (fs.existsSync(filePath)) {
+      const envContent = fs.readFileSync(filePath, "utf-8");
+      for (const line of envContent.split("\n")) {
+        const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)\s*$/);
+        if (match) {
+          const key = match[1];
+          let val = match[2].trim();
+          // Remove quotes if present
+          if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+            val = val.substring(1, val.length - 1);
+          }
+          process.env[key] = val;
+        }
+      }
+      console.log(`[Env] Loaded environment from: ${filePath}`);
+    }
+  } catch (e) {
+    console.error(`[Env] Failed to load env file from ${filePath}:`, e);
+  }
+}
+
+// Load website's .env manually (parent folder)
+loadEnvFile(path.join(__dirname, "../../../.env"));
+// Load desktop's .env manually (local callu-desktop folder)
+loadEnvFile(path.join(__dirname, "../../.env"));
 
 const store = new Store();
 
@@ -219,6 +249,14 @@ function setupAutoUpdater() {
 
   autoUpdater.autoDownload = false;
 
+  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+  if (token) {
+    autoUpdater.requestHeaders = {
+      Authorization: `token ${token}`
+    };
+    console.log("[AutoUpdater] Configured authorization headers using GH_TOKEN");
+  }
+
   autoUpdater.on("checking-for-update", () => {
     console.log("[AutoUpdater] Checking for update...");
     mainWindow?.webContents.send("update-status", { status: "checking", message: "Checking for updates..." });
@@ -276,7 +314,11 @@ function setupAutoUpdater() {
 
   autoUpdater.on("error", (err) => {
     console.error("Error in auto-updater: ", err);
-    mainWindow?.webContents.send("update-status", { status: "error", message: err.message || "Error checking for updates." });
+    let errMsg = err.message || "Error checking for updates.";
+    if (errMsg.includes("404") && errMsg.includes("releases.atom")) {
+      errMsg = "Update check failed (404). Please ensure the repository is public and has at least one published release on GitHub.";
+    }
+    mainWindow?.webContents.send("update-status", { status: "error", message: errMsg });
   });
 
   // Check for updates immediately, then every hour
@@ -298,8 +340,7 @@ app.on("ready", () => {
     return allowed.includes(permission);
   });
 
-  // Redirect absolute local requests (like file:///avatars/...) to files inside the dist directory
-  const distPath = path.join(__dirname, "../../dist");
+  // Redirect absolute local requests (like file:///avatars/...) to the remote production server
   session.defaultSession.webRequest.onBeforeRequest(
     { urls: ["file:///*"] },
     (details, callback) => {
@@ -320,8 +361,8 @@ app.on("ready", () => {
       for (const prefix of prefixes) {
         if (urlStr.startsWith(prefix)) {
           const relativePath = urlStr.substring(8); // remove 'file:///'
-          const targetPath = path.join(distPath, relativePath);
-          const redirectURL = pathToFileURL(targetPath).href;
+          const backendUrl = process.env.VITE_API_URL || "https://callu-production.up.railway.app";
+          const redirectURL = `${backendUrl}/${relativePath}`;
           callback({ redirectURL });
           return;
         }
