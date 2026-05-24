@@ -134,29 +134,55 @@ export default function RoomVoiceChatPage() {
   useEffect(() => { isScreenSharingRef.current = isScreenSharing; }, [isScreenSharing]);
   useEffect(() => { participantsRef.current = participants; }, [participants]);
 
-  // ─── Listen for Fullscreen changes and Escape key ───────────────
+  // ─── Listen for Escape key to exit client-fullscreen ────────────
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = !!document.fullscreenElement;
-      setIsScreenShareFullscreen(isCurrentlyFullscreen);
-    };
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isScreenShareFullscreen) {
-        if (document.fullscreenElement) {
-          document.exitFullscreen().catch(() => {});
-        } else {
-          setIsScreenShareFullscreen(false);
-        }
+        setIsScreenShareFullscreen(false);
       }
     };
 
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
     window.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
       window.removeEventListener("keydown", handleKeyDown);
     };
+  }, [isScreenShareFullscreen]);
+
+  // ─── Force containing block to viewport for CSS fullscreen ──────
+  useEffect(() => {
+    if (isScreenShareFullscreen) {
+      const el = spotlightContainerRef.current;
+      if (!el) return;
+
+      const ancestors: HTMLElement[] = [];
+      let parent = el.parentElement;
+      while (parent && parent !== document.body) {
+        ancestors.push(parent);
+        parent = parent.parentElement;
+      }
+
+      ancestors.forEach((ancestor) => {
+        ancestor.setAttribute("data-prev-transform", ancestor.style.transform);
+        ancestor.setAttribute("data-prev-filter", ancestor.style.filter);
+        ancestor.setAttribute("data-prev-will-change", ancestor.style.willChange);
+
+        ancestor.style.setProperty("transform", "none", "important");
+        ancestor.style.setProperty("filter", "none", "important");
+        ancestor.style.setProperty("will-change", "auto", "important");
+      });
+
+      return () => {
+        ancestors.forEach((ancestor) => {
+          const prevTransform = ancestor.getAttribute("data-prev-transform");
+          const prevFilter = ancestor.getAttribute("data-prev-filter");
+          const prevWillChange = ancestor.getAttribute("data-prev-will-change");
+
+          if (prevTransform !== null) ancestor.style.transform = prevTransform;
+          if (prevFilter !== null) ancestor.style.filter = prevFilter;
+          if (prevWillChange !== null) ancestor.style.willChange = prevWillChange;
+        });
+      };
+    }
   }, [isScreenShareFullscreen]);
 
   // ─── Pre-warm canvas PiP stream on mount ─────────────────────────
@@ -1141,31 +1167,7 @@ export default function RoomVoiceChatPage() {
   };
 
   const toggleScreenShareFullscreen = () => {
-    const el = spotlightContainerRef.current;
-    if (!el) {
-      setIsScreenShareFullscreen(prev => !prev);
-      return;
-    }
-
-    if (!document.fullscreenElement) {
-      el.requestFullscreen()
-        .then(() => {
-          setIsScreenShareFullscreen(true);
-        })
-        .catch((err) => {
-          console.error("Failed to enter native fullscreen:", err);
-          setIsScreenShareFullscreen(true); // Fallback to CSS fullscreen class
-        });
-    } else {
-      document.exitFullscreen()
-        .then(() => {
-          setIsScreenShareFullscreen(false);
-        })
-        .catch((err) => {
-          console.error("Failed to exit native fullscreen:", err);
-          setIsScreenShareFullscreen(false); // Fallback to CSS fullscreen class
-        });
-    }
+    setIsScreenShareFullscreen(prev => !prev);
   };
 
   // ═══════════════════════════════════════════════════════════════════
@@ -1253,9 +1255,11 @@ export default function RoomVoiceChatPage() {
             {/* Main spotlight area */}
             <div
               ref={spotlightContainerRef}
-              className={`flex-1 relative rounded-3xl overflow-hidden bg-zinc-900/40 border border-zinc-800/50 min-h-[300px] transition-all ${
-                isScreenShareFullscreen ? "fixed inset-0 rounded-none z-[100]" : ""
-              }`}
+              className={
+                isScreenShareFullscreen
+                  ? "fixed inset-0 rounded-none z-[99999] bg-zinc-950 overflow-hidden"
+                  : "flex-1 relative rounded-3xl overflow-hidden bg-zinc-900/40 border border-zinc-800/50 min-h-[300px] transition-all"
+              }
             >
               {(() => {
                 const currentSpotlightId =
