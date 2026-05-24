@@ -204,7 +204,7 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
         audioCtxRef.current.resume();
       }
       audioRefs.current.forEach((audio) => {
-        if (audio.muted && !isDeafenedRef.current) {
+        if (!isDeafenedRef.current) {
           audio.muted = false;
           audio.play().catch(() => {});
         }
@@ -403,6 +403,10 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
         },
       });
       localStreamRef.current = stream;
+      const track = stream.getAudioTracks()[0];
+      if (track) {
+        track.enabled = !isMutedRef.current;
+      }
       setupLocalAudioAnalyzer(stream);
       void refreshDeviceLists();
       return stream;
@@ -595,7 +599,7 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
           }
         };
         
-        allocateBandwidth();
+        // allocateBandwidth();
       } else if (pc.iceConnectionState === "failed") {
         console.error(`❌ ICE failed with ${targetUserId}`);
       }
@@ -649,15 +653,11 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
       try {
         if (pc.signalingState !== "stable") return pc;
         const offer = await pc.createOffer();
-        const optimizedOffer = new RTCSessionDescription({
-          type: offer.type,
-          sdp: optimizeSDP(offer.sdp || ""),
-        });
-        await pc.setLocalDescription(optimizedOffer);
+        await pc.setLocalDescription(offer);
         s.emit("room-signal", {
           roomId: rid,
           targetUserId,
-          signal: { type: "offer", sdp: optimizedOffer },
+          signal: { type: "offer", sdp: offer },
         });
       } catch (error) {
         console.error("Failed to create offer:", error);
@@ -718,15 +718,11 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
           await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
           await flushIceCandidates(fromUserId, pc);
           const answer = await pc.createAnswer();
-          const optimizedAnswer = new RTCSessionDescription({
-            type: answer.type,
-            sdp: optimizeSDP(answer.sdp || ""),
-          });
-          await pc.setLocalDescription(optimizedAnswer);
+          await pc.setLocalDescription(answer);
           s.emit("room-signal", {
             roomId: rid,
             targetUserId: fromUserId,
-            signal: { type: "answer", sdp: optimizedAnswer },
+            signal: { type: "answer", sdp: answer },
           });
         } catch (error) {
           console.error(`❌ Error handling offer from ${fromUserId}:`, error);

@@ -64,8 +64,6 @@ const SCAN_CODE_MAP: Record<number, string> = {
 export default function SettingsPage() {
   const { user, logout, updateUser } = useAuth();
   const {
-    isPTTEnabled,
-    setIsPTTEnabled,
     availableMics,
     availableSpeakers,
     selectedMicId,
@@ -591,56 +589,35 @@ export default function SettingsPage() {
       {/* Voice & Audio Tab */}
       {activeTab === "voice" && (
         <div className="space-y-6">
-          {/* Push-to-Talk Configuration */}
           <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 backdrop-blur-sm">
-            <h3 className="text-lg font-medium text-white mb-6">Voice Mode Settings</h3>
+            <h3 className="text-lg font-medium text-white mb-2">Push-to-Talk Key</h3>
+            <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
+              Configure which key activates Push-to-Talk. You can enable PTT from the microphone dropdown arrow inside a voice room.
+            </p>
             
-            <div className="space-y-6">
-              <div className="flex items-center justify-between py-3 border-b border-zinc-800/50">
-                <div className="max-w-[80%]">
-                  <p className="text-white font-medium">Push-to-Talk (PTT)</p>
-                  <p className="text-sm text-zinc-500 mt-1 leading-relaxed">
-                    Automatically mutes your microphone until you hold the PTT key shortcut. Extremely useful to prevent keyboard typing noises, echo, or background distractions.
-                  </p>
-                </div>
+            <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-white text-sm font-medium">PTT Keyboard Shortcut</p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  {isRecordingKeybind ? "Press any key on your keyboard to assign it..." : "Click the key badge to change your shortcut"}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setIsPTTEnabled(!isPTTEnabled)}
-                  className={`relative w-14 h-7 rounded-full transition-colors cursor-pointer shrink-0 ${
-                    isPTTEnabled ? "bg-emerald-500" : "bg-zinc-700"
+                  onClick={() => setIsRecordingKeybind(true)}
+                  disabled={isRecordingKeybind}
+                  className={`relative px-4 py-2 bg-zinc-900 border text-xs font-semibold font-mono rounded-lg transition-all shadow-inner cursor-pointer active:scale-95 select-none ${
+                    isRecordingKeybind 
+                      ? "border-emerald-500/50 bg-emerald-950/20 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.25)] animate-pulse" 
+                      : "border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 text-zinc-300 hover:text-white"
                   }`}
                 >
-                  <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                    isPTTEnabled ? "translate-x-8" : "translate-x-1"
-                  }`} />
+                  {isRecordingKeybind ? "Recording..." : SCAN_CODE_MAP[pttKeycode] || `Key Code ${pttKeycode}`}
                 </button>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 select-none">
+                  {isRecordingKeybind ? "Waiting" : "Global Hook"}
+                </span>
               </div>
-
-              {isPTTEnabled && (
-                <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
-                  <div>
-                    <p className="text-white text-sm font-medium">PTT Keyboard Shortcut</p>
-                    <p className="text-xs text-zinc-500 mt-1">
-                      {isRecordingKeybind ? "Press any key on your keyboard to assign it..." : "Click the key badge to configure a new shortcut"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setIsRecordingKeybind(true)}
-                      disabled={isRecordingKeybind}
-                      className={`relative px-4 py-2 bg-zinc-900 border text-xs font-semibold font-mono rounded-lg transition-all shadow-inner cursor-pointer active:scale-95 select-none ${
-                        isRecordingKeybind 
-                          ? "border-emerald-500/50 bg-emerald-950/20 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.25)] animate-pulse" 
-                          : "border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 text-zinc-300 hover:text-white"
-                      }`}
-                    >
-                      {isRecordingKeybind ? "Recording..." : SCAN_CODE_MAP[pttKeycode] || `Key Code ${pttKeycode}`}
-                    </button>
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 select-none">
-                      {isRecordingKeybind ? "Waiting" : "Global Hook"}
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 

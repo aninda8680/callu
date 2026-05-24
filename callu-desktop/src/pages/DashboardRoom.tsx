@@ -81,6 +81,9 @@ export default function RoomVoiceChatPage() {
     localStreamRef,
     localVideoTrackRef,
     localVideoStreamRef,
+    isPTTEnabled,
+    setIsPTTEnabled,
+    isPTTActive,
   } = useRoomVoice();
 
   // ─── Local page state (dies on navigation — that's fine) ────────
@@ -1605,6 +1608,26 @@ export default function RoomVoiceChatPage() {
                         </button>
                       ))
                     )}
+                  </div>
+                  {/* PTT Toggle */}
+                  <div className="border-t border-zinc-800/60 mt-1 pt-1">
+                    <button
+                      onClick={() => setIsPTTEnabled(!isPTTEnabled)}
+                      className={`w-full flex items-center justify-between px-2 py-2 rounded-lg text-xs transition cursor-pointer ${
+                        isPTTEnabled
+                          ? "bg-emerald-500/10 text-emerald-300"
+                          : "text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-200"
+                      }`}
+                    >
+                      <span>Push-to-Talk</span>
+                      <span className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full ${
+                        isPTTEnabled
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : "bg-zinc-800 text-zinc-500"
+                      }`}>
+                        {isPTTEnabled ? "ON" : "OFF"}
+                      </span>
+                    </button>
                   </div>
                 </div>
               )}

@@ -143,12 +143,7 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
   const [voiceRoomName, setVoiceRoomName] = useState<string | null>(null);
   const [participants, setParticipants] = useState<RoomParticipant[]>([]);
   const [isMuted, setIsMuted] = useState(false);
-  const [isPTTEnabled, setIsPTTEnabled] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("ptt-enabled") === "true";
-    }
-    return false;
-  });
+  const [isPTTEnabled, setIsPTTEnabled] = useState(false);
   const [pttKeycode, setPttKeycode] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("ptt-keycode");
@@ -181,7 +176,29 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
   useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
   useEffect(() => {
     isPTTEnabledRef.current = isPTTEnabled;
-    localStorage.setItem("ptt-enabled", isPTTEnabled ? "true" : "false");
+    // When PTT is toggled in-room, auto-mute/unmute accordingly
+    const stream = localStreamRef.current;
+    if (stream) {
+      if (isPTTEnabled && !isMutedRef.current) {
+        // PTT turned ON → mute the user (they must hold the key to talk)
+        stream.getAudioTracks().forEach((t) => { t.enabled = false; });
+        setIsMuted(true);
+        const s = socketRef.current;
+        const u = userRef.current;
+        const rid = voiceRoomIdRef.current;
+        if (s && u && rid) s.emit("room-mute-toggle", { roomId: rid, userId: u._id, isMuted: true });
+        if (u) setParticipants(prev => prev.map(p => p.userId === u._id ? { ...p, isMuted: true } : p));
+      } else if (!isPTTEnabled && isMutedRef.current) {
+        // PTT turned OFF → unmute the user (back to normal open mic)
+        stream.getAudioTracks().forEach((t) => { t.enabled = true; });
+        setIsMuted(false);
+        const s = socketRef.current;
+        const u = userRef.current;
+        const rid = voiceRoomIdRef.current;
+        if (s && u && rid) s.emit("room-mute-toggle", { roomId: rid, userId: u._id, isMuted: false });
+        if (u) setParticipants(prev => prev.map(p => p.userId === u._id ? { ...p, isMuted: false } : p));
+      }
+    }
   }, [isPTTEnabled]);
 
   useEffect(() => {
@@ -295,7 +312,7 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
         audioCtxRef.current.resume();
       }
       audioRefs.current.forEach((audio) => {
-        if (audio.muted && !isDeafenedRef.current) {
+        if (!isDeafenedRef.current) {
           audio.muted = false;
           audio.play().catch(() => {});
         }
@@ -496,6 +513,16 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
       });
 
       localStreamRef.current = stream;
+      const track = stream.getAudioTracks()[0];
+      if (track) {
+        if (isPTTEnabledRef.current) {
+          track.enabled = false;
+          setIsMuted(true);
+          isMutedRef.current = true;
+        } else {
+          track.enabled = !isMutedRef.current;
+        }
+      }
       setupLocalAudioAnalyzer(stream);
       void refreshDeviceLists();
       return stream;
@@ -688,7 +715,7 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
           }
         };
         
-        allocateBandwidth();
+        // allocateBandwidth();
       } else if (pc.iceConnectionState === "failed") {
         console.error(`❌ ICE failed with ${targetUserId}`);
       }
@@ -742,15 +769,11 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
       try {
         if (pc.signalingState !== "stable") return pc;
         const offer = await pc.createOffer();
-        const optimizedOffer = new RTCSessionDescription({
-          type: offer.type,
-          sdp: optimizeSDP(offer.sdp || ""),
-        });
-        await pc.setLocalDescription(optimizedOffer);
+        await pc.setLocalDescription(offer);
         s.emit("room-signal", {
           roomId: rid,
           targetUserId,
-          signal: { type: "offer", sdp: optimizedOffer },
+          signal: { type: "offer", sdp: offer },
         });
       } catch (error) {
         console.error("Failed to create offer:", error);
@@ -811,15 +834,11 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
           await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
           await flushIceCandidates(fromUserId, pc);
           const answer = await pc.createAnswer();
-          const optimizedAnswer = new RTCSessionDescription({
-            type: answer.type,
-            sdp: optimizeSDP(answer.sdp || ""),
-          });
-          await pc.setLocalDescription(optimizedAnswer);
+          await pc.setLocalDescription(answer);
           s.emit("room-signal", {
             roomId: rid,
             targetUserId: fromUserId,
-            signal: { type: "answer", sdp: optimizedAnswer },
+            signal: { type: "answer", sdp: answer },
           });
         } catch (error) {
           console.error(`❌ Error handling offer from ${fromUserId}:`, error);
@@ -1076,6 +1095,7 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
     setParticipants([]);
     setIsMuted(false);
     setIsDeafened(false);
+    setIsPTTEnabled(false);
     setIsInRoom(false);
     setCurrentRoomId(null);
     setCurrentRoomName(null);
@@ -1085,27 +1105,9 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
     const currentStream = localStreamRef.current;
     if (currentStream) {
       const newMuted = !isMutedRef.current;
-      const audioTrack = currentStream.getAudioTracks()[0];
-
-      if (audioTrack) {
-        // track.enabled as secondary signal (generates silence locally)
-        audioTrack.enabled = !newMuted;
-
-        // Hard mute: replaceTrack(null) stops RTP audio packets entirely
-        // Hard unmute: replaceTrack(audioTrack) restores audio transmission
-        // This is the only reliable mute in modern Chrome/Electron
-        peerConnectionsRef.current.forEach((pc) => {
-          // Audio sender is always the first sender (added before video)
-          // After replaceTrack(null), sender.track becomes null but sender persists
-          const senders = pc.getSenders();
-          const audioSender = senders.find((s) => s.track?.kind === "audio") 
-            || senders[0]; // fallback: first sender is audio
-          if (audioSender) {
-            audioSender.replaceTrack(newMuted ? null : audioTrack).catch(() => {});
-          }
-        });
-      }
-
+      currentStream.getAudioTracks().forEach((track) => {
+        track.enabled = !newMuted;
+      });
       setIsMuted(newMuted);
 
       // Broadcast mute state to other participants
@@ -1138,8 +1140,30 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
 
     let isKeyDown = false;
 
+    // Helper: directly mute/unmute using refs (avoids stale closure from toggleMute)
+    const setMuteState = (muted: boolean) => {
+      const stream = localStreamRef.current;
+      if (!stream) return;
+      if (isMutedRef.current === muted) return; // already in desired state
+
+      stream.getAudioTracks().forEach((track) => {
+        track.enabled = !muted;
+      });
+      setIsMuted(muted);
+
+      const s = socketRef.current;
+      const u = userRef.current;
+      const rid = voiceRoomIdRef.current;
+      if (s && u && rid) {
+        s.emit("room-mute-toggle", { roomId: rid, userId: u._id, isMuted: muted });
+      }
+      if (u) {
+        setParticipants(prev => prev.map(p => p.userId === u._id ? { ...p, isMuted: muted } : p));
+      }
+    };
+
     const handleKeyDown = (data: { keycode: number }) => {
-      // If we are recording a custom keybind, capture this keypress, save the scan code, and exit recording
+      // If we are recording a custom keybind, capture this keypress
       if (isRecordingKeybindRef.current) {
         setPttKeycode(data.keycode);
         setIsRecordingKeybind(false);
@@ -1147,14 +1171,11 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
       }
 
       if (!isPTTEnabledRef.current) return;
-      const currentPttKeycode = pttKeycodeRef.current;
-      if (data.keycode === currentPttKeycode) {
+      if (data.keycode === pttKeycodeRef.current) {
         if (!isKeyDown) {
           isKeyDown = true;
           setIsPTTActive(true);
-          if (isMutedRef.current) {
-            toggleMute();
-          }
+          setMuteState(false); // unmute while key is held
         }
       }
     };
@@ -1163,13 +1184,10 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
       if (isRecordingKeybindRef.current) return;
       
       if (!isPTTEnabledRef.current) return;
-      const currentPttKeycode = pttKeycodeRef.current;
-      if (data.keycode === currentPttKeycode) {
+      if (data.keycode === pttKeycodeRef.current) {
         isKeyDown = false;
         setIsPTTActive(false);
-        if (!isMutedRef.current) {
-          toggleMute();
-        }
+        setMuteState(true); // re-mute when key is released
       }
     };
 
