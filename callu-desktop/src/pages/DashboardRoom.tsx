@@ -84,6 +84,10 @@ export default function RoomVoiceChatPage() {
     isPTTEnabled,
     setIsPTTEnabled,
     isPTTActive,
+    userVolumes,
+    userMutes,
+    setUserVolume,
+    setUserMute,
   } = useRoomVoice();
 
   // ─── Local page state (dies on navigation — that's fine) ────────
@@ -1336,6 +1340,46 @@ export default function RoomVoiceChatPage() {
                             </div>
                           )}
                         </div>
+                        {sp.userId !== user?._id && (
+                          <div className="flex items-center gap-2 bg-zinc-950/75 backdrop-blur-md px-3 py-1.5 rounded-xl border border-zinc-800/50 mr-2 shadow-lg" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              tabIndex={-1}
+                              onFocus={(e) => e.currentTarget.blur()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.currentTarget.blur();
+                                setUserMute(sp.userId, !userMutes[sp.userId]);
+                              }}
+                              className={`p-1 rounded-md transition ${
+                                userMutes[sp.userId]
+                                  ? "text-red-400 hover:bg-red-500/10"
+                                  : "text-zinc-400 hover:bg-zinc-850 hover:text-white"
+                              }`}
+                              title={userMutes[sp.userId] ? "Unmute locally" : "Mute locally"}
+                            >
+                              {userMutes[sp.userId] ? (
+                                <VolumeX className="w-4 h-4" />
+                              ) : (
+                                <Volume2 className="w-4 h-4" />
+                              )}
+                            </button>
+                            
+                            <div className="w-20 flex items-center">
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={Math.round((userVolumes[sp.userId] !== undefined ? userVolumes[sp.userId] : 1.0) * 100)}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  setUserVolume(sp.userId, parseInt(e.target.value, 10) / 100);
+                                }}
+                                className="w-full accent-emerald-500 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer outline-none transition hover:bg-zinc-600"
+                                title={`Local Volume: ${Math.round((userVolumes[sp.userId] !== undefined ? userVolumes[sp.userId] : 1.0) * 100)}%`}
+                              />
+                            </div>
+                          </div>
+                        )}
                         {(sp.isScreenSharing || sp.isVideoOn) && (
                           <button
                             onClick={toggleScreenShareFullscreen}
@@ -1361,6 +1405,12 @@ export default function RoomVoiceChatPage() {
                         <MicOff className="w-4 h-4 text-red-400" />
                       </div>
                     )}
+                    {/* Local Mute badge */}
+                    {userMutes[sp.userId] && (
+                      <div className="absolute top-3 left-3 z-30 w-8 h-8 rounded-full bg-red-500/20 backdrop-blur-sm flex items-center justify-center border border-red-500/30">
+                        <VolumeX className="w-4 h-4 text-red-400" />
+                      </div>
+                    )}
                   </>
                 );
               })()}
@@ -1379,7 +1429,7 @@ export default function RoomVoiceChatPage() {
                     <div
                       key={p.userId}
                       onClick={() => setSpotlightUserId(p.userId)}
-                      className={`relative flex-shrink-0 w-28 h-28 rounded-2xl overflow-hidden bg-zinc-900/60 border cursor-pointer transition-all hover:border-zinc-600 ${
+                      className={`group relative flex-shrink-0 w-28 h-28 rounded-2xl overflow-hidden bg-zinc-900/60 border cursor-pointer transition-all hover:border-zinc-600 ${
                         p.isSpeaking ? "border-emerald-500/50" : "border-zinc-800/50"
                       }`}
                     >
@@ -1428,6 +1478,30 @@ export default function RoomVoiceChatPage() {
                         <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-zinc-700/80 flex items-center justify-center">
                           <MicOff className="w-2.5 h-2.5 text-red-400" />
                         </div>
+                      )}
+                      {/* Local Mute Badge / Button in Sidebar */}
+                      {p.userId !== user?._id && (
+                        <button
+                          tabIndex={-1}
+                          onFocus={(e) => e.currentTarget.blur()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.currentTarget.blur();
+                            setUserMute(p.userId, !userMutes[p.userId]);
+                          }}
+                          className={`absolute top-1 left-7 w-5 h-5 rounded-full backdrop-blur-sm flex items-center justify-center border transition z-30 ${
+                            userMutes[p.userId]
+                              ? "bg-red-500/20 border-red-500/30 text-red-400"
+                              : "bg-zinc-800/80 border-zinc-700/50 text-zinc-400 opacity-0 group-hover:opacity-100 hover:text-white"
+                          }`}
+                          title={userMutes[p.userId] ? "Unmute locally" : "Mute locally"}
+                        >
+                          {userMutes[p.userId] ? (
+                            <VolumeX className="w-2.5 h-2.5" />
+                          ) : (
+                            <Volume2 className="w-2.5 h-2.5" />
+                          )}
+                        </button>
                       )}
                     </div>
                   ));
@@ -1540,6 +1614,55 @@ export default function RoomVoiceChatPage() {
                   {participant.isMuted && (
                     <div className="absolute top-2 right-2 z-40 w-7 h-7 rounded-full bg-zinc-700/80 backdrop-blur-sm flex items-center justify-center">
                       <MicOff className="w-3.5 h-3.5 text-red-400" />
+                    </div>
+                  )}
+
+                  {/* Local Mute Badge (when not hovered) */}
+                  {userMutes[participant.userId] && (
+                    <div className="absolute top-2 left-2 z-30 group-hover:opacity-0 transition-opacity duration-200 w-7 h-7 rounded-full bg-red-500/20 backdrop-blur-sm flex items-center justify-center border border-red-500/30">
+                      <VolumeX className="w-3.5 h-3.5 text-red-400" />
+                    </div>
+                  )}
+
+                  {/* Local per-user Volume/Mute controls overlay (when hovered) */}
+                  {participant.userId !== user?._id && (
+                    <div className="absolute top-2 left-2 z-40 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-zinc-950/80 backdrop-blur-md px-2.5 py-1.5 rounded-full border border-zinc-800/60 shadow-lg" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        tabIndex={-1}
+                        onFocus={(e) => e.currentTarget.blur()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.currentTarget.blur();
+                          setUserMute(participant.userId, !userMutes[participant.userId]);
+                        }}
+                        className={`p-1 rounded-md transition ${
+                          userMutes[participant.userId]
+                            ? "text-red-400 hover:bg-red-500/10"
+                            : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                        }`}
+                        title={userMutes[participant.userId] ? "Unmute locally" : "Mute locally"}
+                      >
+                        {userMutes[participant.userId] ? (
+                          <VolumeX className="w-3.5 h-3.5" />
+                        ) : (
+                          <Volume2 className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                      
+                      <div className="w-16 flex items-center">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={Math.round((userVolumes[participant.userId] !== undefined ? userVolumes[participant.userId] : 1.0) * 100)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            setUserVolume(participant.userId, parseInt(e.target.value, 10) / 100);
+                          }}
+                          className="w-full accent-emerald-500 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer outline-none transition hover:bg-zinc-600"
+                          title={`Local Volume: ${Math.round((userVolumes[participant.userId] !== undefined ? userVolumes[participant.userId] : 1.0) * 100)}%`}
+                        />
+                      </div>
                     </div>
                   )}
                 </motion.div>

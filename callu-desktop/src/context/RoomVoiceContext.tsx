@@ -48,6 +48,10 @@ interface RoomVoiceContextType {
   setPttKeycode: (code: number) => void;
   isRecordingKeybind: boolean;
   setIsRecordingKeybind: (val: boolean) => void;
+  userVolumes: Record<string, number>;
+  userMutes: Record<string, boolean>;
+  setUserVolume: (userId: string, volume: number) => void;
+  setUserMute: (userId: string, muted: boolean) => void;
 }
 
 const RoomVoiceContext = createContext<RoomVoiceContextType>({
@@ -81,6 +85,10 @@ const RoomVoiceContext = createContext<RoomVoiceContextType>({
   setPttKeycode: () => {},
   isRecordingKeybind: false,
   setIsRecordingKeybind: () => {},
+  userVolumes: {},
+  userMutes: {},
+  setUserVolume: () => {},
+  setUserMute: () => {},
 });
 
 const ICE_CONFIG: RTCConfiguration = {
@@ -158,6 +166,22 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
   const [selectedMicId, setSelectedMicId] = useState<string | null>(null);
   const [selectedSpeakerId, setSelectedSpeakerId] = useState<string | null>(null);
 
+  const [userVolumes, setUserVolumes] = useState<Record<string, number>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("callu-user-volumes");
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
+  });
+
+  const [userMutes, setUserMutes] = useState<Record<string, boolean>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("callu-user-mutes");
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
+  });
+
   // ─── Stable refs for handler closures (avoid stale captures) ────
   const voiceRoomIdRef = useRef<string | null>(null);
   const userRef = useRef(user);
@@ -169,11 +193,21 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
   const isDeafenedRef = useRef(false);
   const isVoiceConnectedRef = useRef(false);
   const selectedSpeakerIdRef = useRef<string | null>(null);
+  const userVolumesRef = useRef<Record<string, number>>(userVolumes);
+  const userMutesRef = useRef<Record<string, boolean>>(userMutes);
 
   // Keep refs in sync
   useEffect(() => { userRef.current = user; }, [user]);
   useEffect(() => { socketRef.current = socket; }, [socket]);
   useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
+  useEffect(() => {
+    userVolumesRef.current = userVolumes;
+    localStorage.setItem("callu-user-volumes", JSON.stringify(userVolumes));
+  }, [userVolumes]);
+  useEffect(() => {
+    userMutesRef.current = userMutes;
+    localStorage.setItem("callu-user-mutes", JSON.stringify(userMutes));
+  }, [userMutes]);
   useEffect(() => {
     isPTTEnabledRef.current = isPTTEnabled;
     // When PTT is toggled in-room, auto-mute/unmute accordingly
@@ -750,7 +784,13 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
           applySpeakerToAudio(audio, speakerId).catch(() => {});
         }
         audio.srcObject = remoteStream;
-        if (isDeafenedRef.current) audio.muted = true;
+        
+        // Initialize with user's local volume and mute preference
+        const savedVolume = userVolumesRef.current[targetUserId] ?? 1.0;
+        const savedMuted = userMutesRef.current[targetUserId] ?? false;
+        audio.volume = savedVolume;
+        audio.muted = isDeafenedRef.current || savedMuted;
+
         audio.play().catch(err => console.error(`Error playing audio for ${targetUserId}:`, err));
         setupRemoteAudioAnalyzer(remoteStream, targetUserId);
       } else if (event.track.kind === "video") {
@@ -1145,10 +1185,27 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
     }
   };
 
+  const setUserVolume = (userId: string, volume: number) => {
+    setUserVolumes((prev) => ({ ...prev, [userId]: volume }));
+    const audio = audioRefs.current.get(userId);
+    if (audio) {
+      audio.volume = volume;
+    }
+  };
+
+  const setUserMute = (userId: string, muted: boolean) => {
+    setUserMutes((prev) => ({ ...prev, [userId]: muted }));
+    const audio = audioRefs.current.get(userId);
+    if (audio) {
+      audio.muted = isDeafenedRef.current || muted;
+    }
+  };
+
   const toggleDeafen = () => {
     const newDeafened = !isDeafenedRef.current;
-    audioRefs.current.forEach((audio) => {
-      audio.muted = newDeafened;
+    audioRefs.current.forEach((audio, userId) => {
+      const locallyMuted = userMutesRef.current[userId] ?? false;
+      audio.muted = newDeafened || locallyMuted;
     });
     setIsDeafened(newDeafened);
   };
@@ -1324,6 +1381,10 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
         setPttKeycode,
         isRecordingKeybind,
         setIsRecordingKeybind,
+        userVolumes,
+        userMutes,
+        setUserVolume,
+        setUserMute,
       }}
     >
       {children}
