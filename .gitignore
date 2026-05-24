@@ -45,7 +45,7 @@ server.js
 # callu-desktop specific ignores
 /callu-desktop/node_modules/
 /callu-desktop/dist/
-/callu-desktop/release/
+/callu-desktop/release
 /callu-desktop/electron/dist/
 /callu-desktop/.env
 /callu-desktop/.env.production
