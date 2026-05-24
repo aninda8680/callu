@@ -11,7 +11,7 @@ export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
 
   return (
-    <main className="min-h-screen bg-black text-white relative overflow-hidden flex flex-col items-center">
+    <main className="bg-black text-white relative flex flex-col items-center w-full">
       {/* Background Ambience */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-900/20 rounded-full blur-[128px]" />

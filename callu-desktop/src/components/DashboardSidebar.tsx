@@ -232,7 +232,7 @@ export function DashboardSidebar() {
       animate={{ width: isCollapsed ? 80 : 256 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className={cn(
-        "bg-black border-r border-zinc-900 h-screen sticky top-0 hidden md:flex flex-col justify-between py-6 z-20 overflow-hidden relative"
+        "bg-black border-r border-zinc-900 h-full sticky top-0 hidden md:flex flex-col justify-between py-6 z-20 overflow-hidden relative"
       )}
     >
         {/* Toggle Button */}

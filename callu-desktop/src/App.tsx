@@ -21,7 +21,7 @@ const Titlebar = () => {
 
   return (
     <div 
-      className="h-10 bg-zinc-950 border-b border-zinc-900 flex items-center justify-between px-4 select-none shrink-0" 
+      className="h-10 bg-zinc-950 border-b border-zinc-900 flex items-center justify-between px-4 select-none shrink-0 sticky top-0 z-50" 
       style={{ WebkitAppRegion: "drag" } as any}
     >
       <div className="flex items-center gap-2">
@@ -45,7 +45,7 @@ const Titlebar = () => {
         </button>
         <button 
           onClick={() => window.electron.send("window-close")} 
-          className="h-10 w-12 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-red-650 transition-colors"
+          className="h-10 w-12 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-red-600 transition-colors"
           title="Close to Tray"
         >
           <X className="w-3.5 h-3.5" />
@@ -204,9 +204,9 @@ export default function App() {
       <AuthProvider>
         <SmoothScrolling>
           <ScreenShareProvider>
-            <div className="flex flex-col h-screen w-screen overflow-hidden bg-black text-white">
+            <div className="flex flex-col h-full w-full bg-black text-white">
               <Titlebar />
-              <div className="flex-1 overflow-hidden relative">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden relative">
                 <Routes>
                   {/* Public route */}
                   <Route path="/" element={<Home />} />
