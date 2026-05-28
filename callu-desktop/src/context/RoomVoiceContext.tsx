@@ -89,7 +89,7 @@ const RoomVoiceContext = createContext<RoomVoiceContextType>({
   setPttKeycode: () => {},
   isRecordingKeybind: false,
   setIsRecordingKeybind: () => {},
-  muteKeycode: 0,
+  muteKeycode: 62,
   setMuteKeycode: () => {},
   isRecordingMuteKeybind: false,
   setIsRecordingMuteKeybind: () => {},
@@ -173,7 +173,7 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
       const saved = localStorage.getItem("mute-keycode");
       if (saved) return parseInt(saved, 10);
     }
-    return 0; // 0 = not set
+    return 62; // 62 = F4
   });
   const [isRecordingMuteKeybind, setIsRecordingMuteKeybind] = useState(false);
 
@@ -275,7 +275,7 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
     let token = "";
     try { token = JSON.parse(session).token; } catch { return; }
     if (!token) return;
-    const baseUrl = import.meta.env.VITE_API_URL || "https://callu.up.railway.app";
+    const baseUrl = window.CALLU_SERVER_URL || import.meta.env.VITE_API_URL || "https://callu.up.railway.app";
     fetch(`${baseUrl}/api/users/keybinds`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -578,7 +578,7 @@ export const RoomVoiceProvider = ({ children }: { children: React.ReactNode }) =
       const u = userRef.current;
       const s = socketRef.current;
       if (u && rid) {
-        const baseUrl = import.meta.env.VITE_API_URL || "https://callu.up.railway.app";
+        const baseUrl = window.CALLU_SERVER_URL || import.meta.env.VITE_API_URL || "https://callu.up.railway.app";
         navigator.sendBeacon(
           `${baseUrl}/api/rooms/leave`,
           new Blob([JSON.stringify({ roomId: rid, userId: u._id })], { type: "application/json" })

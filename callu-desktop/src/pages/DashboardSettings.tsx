@@ -724,8 +724,46 @@ export default function SettingsPage() {
 
       {/* Account Tab */}
       {activeTab === "account" && (
-        <div className="space-y-4">
-          <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 backdrop-blur-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 backdrop-blur-sm h-full flex flex-col">
+            <h3 className="text-lg font-medium text-white mb-4">Account Information</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between py-2 border-b border-zinc-800/50">
+                <span className="text-zinc-400">Account Status</span>
+                <span className="text-white capitalize">{user?.status || "Active"}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-zinc-800/50">
+                <span className="text-zinc-400">Role</span>
+                <span className="text-white capitalize">{user?.role || "User"}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-zinc-800/50">
+                <span className="text-zinc-400">Member Since</span>
+                <span className="text-white">2026</span>
+              </div>
+              <div className="flex justify-between py-2 items-center">
+                <span className="text-zinc-400">Server Configuration</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-emerald-400 font-mono bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 text-xs">
+                    {window.CALLU_SERVER_URL || import.meta.env.VITE_API_URL || "https://callu.up.railway.app"}
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (window.electron) {
+                        window.electron.send("set-server-url", null);
+                      }
+                      localStorage.removeItem("callu_session");
+                      window.location.reload();
+                    }}
+                    className="text-xs px-2.5 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 backdrop-blur-sm h-full flex flex-col">
             <h3 className="text-lg font-medium text-white mb-6">Account Actions</h3>
             
             <div className="space-y-4">
@@ -755,24 +793,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </button>
-            </div>
-          </div>
-
-          <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 backdrop-blur-sm">
-            <h3 className="text-lg font-medium text-white mb-4">Account Information</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between py-2 border-b border-zinc-800/50">
-                <span className="text-zinc-400">Account Status</span>
-                <span className="text-white capitalize">{user?.status || "Active"}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-zinc-800/50">
-                <span className="text-zinc-400">Role</span>
-                <span className="text-white capitalize">{user?.role || "User"}</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-zinc-400">Member Since</span>
-                <span className="text-white">2026</span>
-              </div>
             </div>
           </div>
         </div>

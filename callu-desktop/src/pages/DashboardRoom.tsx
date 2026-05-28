@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter, useParams } from "next/navigation";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Volume2, VolumeX, PhoneOff, Mic, MicOff,
   Video, VideoOff, MonitorUp, MonitorOff,
@@ -52,7 +52,7 @@ interface ChatMessage {
 
 export default function RoomVoiceChatPage() {
   const { user } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
   const params = useParams();
   const roomId = params?.roomId as string;
   const { socket } = useSocket();
@@ -448,13 +448,31 @@ export default function RoomVoiceChatPage() {
     const handleWindowBlur = () => { void startPiP(); };
     const handleWindowFocus = () => { void stopPiP(); };
 
+    const handleLeavePiP = (e: any) => {
+      console.log("[PiP] leavepictureinpicture triggered! restoring window...");
+      void stopPiP();
+      // Restore Electron window when returning from PiP
+      if (window.electron) {
+        window.electron.send("window-restore");
+      }
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleWindowBlur);
     window.addEventListener("focus", handleWindowFocus);
+    
+    const pipVideoEl = canvasPiPVideoRef.current;
+    if (pipVideoEl) {
+      pipVideoEl.addEventListener("leavepictureinpicture", handleLeavePiP);
+    }
+    
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleWindowBlur);
       window.removeEventListener("focus", handleWindowFocus);
+      if (pipVideoEl) {
+        pipVideoEl.removeEventListener("leavepictureinpicture", handleLeavePiP);
+      }
       stopCanvasAnim();
     };
   }, []);
@@ -472,12 +490,12 @@ export default function RoomVoiceChatPage() {
         return data.rooms[0];
       } else {
         toast.error("Room not found");
-        router.push("/dashboard/members");
+        navigate("/dashboard/members");
         return null;
       }
     } catch (error) {
       console.error("Failed to fetch room:", error);
-      router.push("/dashboard/members");
+      navigate("/dashboard/members");
       return null;
     } finally {
       setLoading(false);
@@ -490,7 +508,7 @@ export default function RoomVoiceChatPage() {
 
   useEffect(() => {
     if (!user || !roomId) {
-      router.push("/dashboard/members");
+      navigate("/dashboard/members");
       return;
     }
 
@@ -517,7 +535,7 @@ export default function RoomVoiceChatPage() {
         connectMusicRoom(roomId);
       } else {
         toast.error("Failed to join voice channel");
-        router.push("/dashboard/members");
+        navigate("/dashboard/members");
       }
     };
     init();
@@ -1163,7 +1181,7 @@ export default function RoomVoiceChatPage() {
   const leaveRoom = () => {
     leaveVoice();
     disconnectMusic();
-    router.push("/dashboard/members");
+    navigate("/dashboard/members");
   };
 
   const toggleScreenShareFullscreen = () => {
@@ -2008,7 +2026,7 @@ export default function RoomVoiceChatPage() {
       {/* Edge trigger to open chat on hover */}
       {!isChatOpen && (
         <div 
-          className="fixed top-0 right-0 h-full w-4 z-[45] hidden sm:block" 
+          className="absolute top-0 right-0 h-full w-4 z-[45] hidden sm:block" 
           onMouseEnter={() => setIsChatOpen(true)}
         />
       )}
@@ -2021,7 +2039,7 @@ export default function RoomVoiceChatPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 z-[55] sm:hidden"
+              className="absolute inset-0 bg-black/40 z-[55] sm:hidden"
               onClick={() => setIsChatOpen(false)}
             />
             <motion.aside
@@ -2030,7 +2048,7 @@ export default function RoomVoiceChatPage() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 480, opacity: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 30 }}
-              className="fixed top-0 right-0 h-full w-full sm:w-[380px] md:w-[420px] sm:min-w-[280px] sm:max-w-[90vw] sm:resize-x sm:overflow-hidden bg-zinc-950/95 backdrop-blur-xl border-l border-zinc-800/60 z-[60] flex flex-col min-h-0 shadow-2xl ring-1 ring-white/5"
+              className="absolute top-0 right-0 h-full w-full sm:w-[380px] md:w-[420px] sm:min-w-[280px] sm:max-w-[90vw] sm:resize-x sm:overflow-hidden bg-zinc-950/95 backdrop-blur-xl border-l border-zinc-800/60 z-[60] flex flex-col min-h-0 shadow-2xl ring-1 ring-white/5"
             >
               <div className="px-5 py-4 border-b border-zinc-800/70 flex items-center justify-between bg-gradient-to-b from-zinc-950/90 to-transparent">
                 <div className="flex items-center gap-2.5">
