@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 interface User {
@@ -43,7 +43,7 @@ const USER_KEY = "callu_user";
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const init = async () => {
@@ -117,7 +117,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("[Auth] Received OAuth token from deep link!");
         try {
           // Instead of fetch, let's use the baseUrl config to hit the right API
-          const baseUrl = import.meta.env.VITE_API_URL || "https://callu.up.railway.app";
+          const baseUrl = window.CALLU_SERVER_URL || import.meta.env.VITE_API_URL || "https://callu.up.railway.app";
           const res = await fetch(`${baseUrl}/api/auth/session`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -231,7 +231,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(SESSION_KEY);
-    router.push("/");
+    navigate("/");
   };
 
   const updateUser = (userData: User) => {

@@ -7,14 +7,13 @@ import { Mic, Shield, Lock, Zap, Twitter, Linkedin, Github, Mail, Activity } fro
 import { Footer } from "@/components/ui/modem-animated-footer";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { LAST_ROUTE_KEY } from "../App";
 
 export default function Home() {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
 
   const handleOAuthLogin = () => {
-    const baseUrl = import.meta.env.VITE_API_URL || "https://callu.up.railway.app";
+    const baseUrl = window.CALLU_SERVER_URL || import.meta.env.VITE_API_URL || "https://callu.up.railway.app";
     const loginUrl = `${baseUrl}/login`;
     if (window.electron) {
       window.electron.send("open-external-url", loginUrl);
@@ -28,13 +27,7 @@ export default function Home() {
       if (user.role === "admin") {
         navigate("/admin", { replace: true });
       } else {
-        // Restore the last visited page, or default to members
-        const lastRoute = localStorage.getItem(LAST_ROUTE_KEY);
-        const destination =
-          lastRoute && lastRoute.startsWith("/dashboard")
-            ? lastRoute
-            : "/dashboard/members";
-        navigate(destination, { replace: true });
+        navigate("/dashboard/members", { replace: true });
       }
     }
   }, [user, isLoading, navigate]);

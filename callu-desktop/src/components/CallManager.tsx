@@ -1274,7 +1274,13 @@ export default function CallManager() {
     if (!videoEl) return;
 
     const onEnterPiP = () => setIsInPiP(true);
-    const onLeavePiP = () => setIsInPiP(false);
+    const onLeavePiP = () => {
+      setIsInPiP(false);
+      // Restore Electron window when returning from PiP
+      if (window.electron) {
+        window.electron.send("window-restore");
+      }
+    };
 
     videoEl.addEventListener("enterpictureinpicture", onEnterPiP);
     videoEl.addEventListener("leavepictureinpicture", onLeavePiP);

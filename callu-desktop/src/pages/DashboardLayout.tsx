@@ -9,24 +9,24 @@ import PersistentMusicPlayer from "@/components/PersistentMusicPlayer";
 import TermsModal from "@/components/TermsModal";
 import CustomContextMenu from "@/components/CustomContextMenu";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Toaster, toast } from "sonner";
 
 export default function DashboardLayout() {
   const { user, isLoading } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
-        router.push("/");
+        navigate("/");
       } else if (user.status !== "approved") {
         toast.error("Account not approved yet.");
-        router.push("/");
+        navigate("/");
       }
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, navigate]);
 
   if (isLoading || !user) return <div className="h-full bg-black flex items-center justify-center text-white">Loading...</div>;
 

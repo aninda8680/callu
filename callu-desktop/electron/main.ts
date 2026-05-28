@@ -73,7 +73,8 @@ const getStoredSessionToken = (): string | null => {
 async function fetchAndApplyGithubToken(sessionToken: string | null) {
   if (!sessionToken) return;
   try {
-    const backendUrl = process.env.VITE_API_URL || "https://callu.up.railway.app";
+    const customUrl = store.get("server-url") as string | undefined;
+    const backendUrl = customUrl || process.env.VITE_API_URL || "https://callu.up.railway.app";
     const response = await net.fetch(`${backendUrl}/api/auth/github-token`, {
       method: "POST",
       headers: {
@@ -193,6 +194,15 @@ function createMainWindow() {
     mainWindow?.close(); // Triggers the 'close' event (hide to tray)
   });
 
+  ipcMain.on("window-restore", () => {
+    console.log("[IPC] window-restore received");
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+
   // Ringtone control IPC from renderer to RingtoneWindow
   ipcMain.on("play-ringtone", () => {
     ringtoneWindow?.webContents.executeJavaScript("window.play()");
@@ -247,6 +257,19 @@ function createMainWindow() {
 
   ipcMain.on("remove-secure-session", () => {
     store.delete("session");
+  });
+
+  // Server URL configuration handlers
+  ipcMain.handle("get-server-url", () => {
+    return store.get("server-url") as string | null;
+  });
+
+  ipcMain.on("set-server-url", (event, url: string | null) => {
+    if (url) {
+      store.set("server-url", url);
+    } else {
+      store.delete("server-url");
+    }
   });
 
   // Manual Check for Updates handlers
